@@ -1,0 +1,37 @@
+{
+  "parts": {
+    "tukabench": {
+      "file": "data/test/tukabench.jsonl",
+      "sha256": "f0b1c6d58d9cad75a51f49711809c15334a0fdac982cfbc93632d98fd4f618b7",
+      "rows": 1200,
+      "counts": {
+        "en/benign": 100,
+        "en/culture": 100,
+        "en/harm": 100,
+        "ha/benign": 100,
+        "ha/culture": 100,
+        "ha/harm": 100,
+        "ig/benign": 100,
+        "ig/culture": 100,
+        "ig/harm": 100,
+        "yo/benign": 100,
+        "yo/culture": 100,
+        "yo/harm": 100
+      },
+      "locked_at": "2026-11-07T08:52:31+00:00"
+    },
+    "pidgin": {
+      "file": "data/test/pidgin.jsonl",
+      "sha256": "f4ffdc9ec18dda7e9dcce69bd08cd2e0a123e31932e6f20903c1e35c5c54c9da",
+      "rows": 400,
+      "counts": {
+        "pcm-en/benign": 100,
+        "pcm-en/harm": 100,
+        "pcm/benign": 100,
+        "pcm/harm": 100
+      },
+      "locked_at": "2026-11-07T15:40:44+00:00"
+    }
+  },
+  "total_rows": 1600
+}
