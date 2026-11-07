@@ -80,8 +80,8 @@ def curate(rows: list[dict], name: str, key: str = "setting") -> tuple[dict[str,
     return curated, manifest
 
 
-def push(curated: dict[str, list[dict]], repo_id: str, card: str, split: str = "test") -> str:
-    """Push one config per shard, public, then the dataset card."""
+def push(curated: dict[str, list[dict]], repo_id: str, card: str, splits=("test",)) -> str:
+    """Push one config per shard (rows routed to splits by their `split` field), then the card."""
     from datasets import Dataset
     from huggingface_hub import DatasetCard
 
@@ -89,9 +89,11 @@ def push(curated: dict[str, list[dict]], repo_id: str, card: str, split: str = "
 
     token = hf_token()
     for shard, rows in curated.items():
-        Dataset.from_list(rows).push_to_hub(
-            repo_id, config_name=shard, split=split, private=False, token=token
-        )
+        for split in splits:
+            part = rows if len(splits) == 1 else [r for r in rows if r["split"] == split]
+            Dataset.from_list(part).push_to_hub(
+                repo_id, config_name=shard, split=split, private=False, token=token
+            )
     # Keep the `configs:` YAML that push_to_hub wrote; replace only the body.
     hub_card = DatasetCard.load(repo_id, repo_type="dataset", token=token)
     hub_card.data.license = "cc-by-nc-4.0"

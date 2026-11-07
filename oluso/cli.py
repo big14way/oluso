@@ -111,6 +111,37 @@ def cmd_data(args) -> int:
         report = fitset.finalize(pidgin.BUILD_DIR, out)
         report["sha256"] = testset.sha256(out)
         _print({**report, "written": str(out.relative_to(config.ROOT))})
+    elif args.step == "publish":
+        from oluso import config
+        from oluso.data import publish
+
+        if not all(testset.verify().values()):
+            raise SystemExit("locked test set fails verification; refusing to publish")
+        test = [r for part in ("tukabench", "pidgin")
+                for r in testset.read_jsonl(testset.TEST_DIR / f"{part}.jsonl")]  # fmt: skip
+        fit = [
+            {
+                "id": r["id"],
+                "setting": r["setting"],
+                "side": r["side"],
+                "split": r["split"],
+                "prompt": r["text"],
+                "goal_en": r["en"],
+                "source": r["source"],
+            }  # fmt: skip
+            for r in testset.read_jsonl(config.ROOT / "data" / "fit" / "fit.jsonl")
+        ]
+        ns = json.loads((config.RECORDS_DIR / "hub.json").read_text())["namespace"]
+        out = {}
+        for name, rows, splits in (("oluso-safety-ng", test, ["test"]),
+                                   ("oluso-steer-fit-ng", fit, ["fit", "dev"])):  # fmt: skip
+            curated, manifest = publish.curate(rows, name)
+            out[name] = {s: m["out"] for s, m in manifest["shards"].items()}
+            if args.apply:
+                card = (config.ROOT / "cards" / f"{name}.md").read_text(encoding="utf-8")
+                out[name]["url"] = publish.push(curated, f"{ns}/{name}", card, splits)
+        out["dry_run"] = not args.apply
+        _print(out)
     elif args.step == "verify":
         res = testset.verify()
         _print(res)
@@ -133,11 +164,13 @@ def main(argv: list[str] | None = None) -> int:
             "pcm-lock",
             "fitset",
             "fitset-finalize",
+            "publish",
             "verify",
         ],
     )
     d.add_argument("--mock", action="store_true", help="offline: mock MT and language ID")
     d.add_argument("--device", default=None)
+    d.add_argument("--apply", action="store_true", help="publish: push to the Hub (else dry run)")
     d.add_argument("--backend", choices=["global", "tiny"], default="global",
                    help="rewrite model for pcm-rewrite")  # fmt: skip
     d.set_defaults(fn=cmd_data)

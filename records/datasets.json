@@ -1,0 +1,16 @@
+{
+  "oluso-safety-ng": {
+    "url": "https://huggingface.co/datasets/alanmik/oluso-safety-ng",
+    "rows": 1600,
+    "parts": {
+      "tukabench": "f0b1c6d58d9cad75a51f49711809c15334a0fdac982cfbc93632d98fd4f618b7",
+      "pidgin": "f4ffdc9ec18dda7e9dcce69bd08cd2e0a123e31932e6f20903c1e35c5c54c9da"
+    }
+  },
+  "oluso-steer-fit-ng": {
+    "url": "https://huggingface.co/datasets/alanmik/oluso-steer-fit-ng",
+    "rows": 1292,
+    "sha256": "e3d9374196cc09b59de835db144218dabff85388aa2a7cab48494f58f0e7c5f3"
+  },
+  "published": "2026-11-07"
+}
