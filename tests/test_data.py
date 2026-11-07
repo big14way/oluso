@@ -138,3 +138,17 @@ def test_fitset_finalize_applies_human_qe_threshold(tmp_path):
     rep = fitset.finalize(b, tmp_path / "fit.jsonl")
     assert rep["qe_thresholds"]["yo"] == pytest.approx(0.51)
     assert rep["kept"] == 2 and rep["dropped"] == {"yo": 1}
+
+
+def test_pcm_lock_keeps_schema_and_refuses_hard_failures(tmp_root):
+    base = _rows(1)[0].to_dict()
+    ok = {**base, "id": "pcm:harm:000", "setting": "pcm", "gate_reasons": ["lid:eng_Latn:0.7"],
+          "origin": "postedit", "back_en": "x"}  # fmt: skip
+    mix = {**base, "id": "pcm-en:harm:000", "setting": "pcm-en", "gate_reasons": []}
+    pidgin.write_draft("pcm_final", [ok])
+    pidgin.write_draft("pcmen_final", [mix])
+    rows = pidgin.lock_rows()
+    assert [set(r) for r in rows] == [set(base)] * 2  # LID flags are advisory
+    pidgin.write_draft("pcmen_final", [{**mix, "gate_reasons": ["same_as_pidgin"]}])
+    with pytest.raises(ValueError):
+        pidgin.lock_rows()

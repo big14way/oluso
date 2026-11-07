@@ -90,6 +90,9 @@ def cmd_data(args) -> int:
             }
         out["review_sheet"] = "data/review/pidgin_review.csv"
         _print(out)
+    elif args.step == "pcm-lock":
+        rows = pidgin.lock_rows()
+        _print(testset.record_part("pidgin", testset.TEST_DIR / "pidgin.jsonl", rows))
     elif args.step == "fitset":
         from oluso.data import fitset
 
@@ -127,6 +130,7 @@ def main(argv: list[str] | None = None) -> int:
             "pcm-draft",
             "pcm-rewrite",
             "pcm-finalize",
+            "pcm-lock",
             "fitset",
             "fitset-finalize",
             "verify",

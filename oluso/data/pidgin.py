@@ -174,3 +174,18 @@ def finalize(mock: bool = False, device: str | None = None) -> tuple[list[dict],
 
         w.writerows(sorted(sheet, key=lambda r: (not needs_review(r), r["label"], r["index"])))
     return pcm_rows, mix_rows
+
+
+ADVISORY = {"lid"}  # GlotLID often labels short Nigerian Pidgin prompts as English
+
+
+def lock_rows() -> list[dict]:
+    """Final pcm and pcm-en rows in the test-set schema; refuses any non-advisory gate failure."""
+    rows = read_draft("pcm_final") + read_draft("pcmen_final")
+    hard = [
+        (r["id"], x) for r in rows for x in r["gate_reasons"] if x.split(":")[0] not in ADVISORY
+    ]
+    if hard:
+        raise ValueError(f"{len(hard)} rows fail a hard gate, e.g. {hard[:3]}")
+    fields = list(PromptRow.__dataclass_fields__)
+    return [{k: r[k] for k in fields} for r in rows]
