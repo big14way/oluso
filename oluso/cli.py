@@ -78,6 +78,18 @@ def cmd_data(args) -> int:
             }
         out["pcm_origin"] = Counter(r["origin"] for r in pcm_rows)
         _print(out)
+    elif args.step == "pcm-finalize":
+        pcm_rows, mix_rows = pidgin.finalize(mock=args.mock, device=args.device)
+        out = {}
+        for name, rows in (("pcm", pcm_rows), ("pcm-en", mix_rows)):
+            out[name] = {
+                "rows": len(rows),
+                "passed": sum(r["gate_pass"] for r in rows),
+                "origin": Counter(r["origin"] for r in rows),
+                "fail_reasons": Counter(x.split(":")[0] for r in rows for x in r["gate_reasons"]),
+            }
+        out["review_sheet"] = "data/review/pidgin_review.csv"
+        _print(out)
     elif args.step == "fitset":
         from oluso.data import fitset
 
@@ -100,7 +112,10 @@ def main(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     d = sub.add_parser("data", help="build and lock datasets")
-    d.add_argument("step", choices=["tukabench", "pcm-draft", "pcm-rewrite", "fitset", "verify"])
+    d.add_argument(
+        "step",
+        choices=["tukabench", "pcm-draft", "pcm-rewrite", "pcm-finalize", "fitset", "verify"],
+    )
     d.add_argument("--mock", action="store_true", help="offline: mock MT and language ID")
     d.add_argument("--device", default=None)
     d.add_argument("--backend", choices=["global", "tiny"], default="global",
