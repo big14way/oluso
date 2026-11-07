@@ -46,9 +46,66 @@ def cmd_hub_init(args) -> int:
     return 0
 
 
+def cmd_data(args) -> int:
+    from collections import Counter
+
+    from oluso.data import pidgin, sources, testset
+
+    if args.step == "tukabench":
+        rows = [r.to_dict() for r in sources.tukabench_rows()]
+        _print(testset.record_part("tukabench", testset.TEST_DIR / "tukabench.jsonl", rows))
+    elif args.step == "pcm-draft":
+        goals = sources.english_goals(sources.tukabench_rows())
+        rows = pidgin.build_pcm(goals, mock=args.mock, device=args.device)
+        path = pidgin.write_draft("pcm_draft_mock" if args.mock else "pcm_draft", rows)
+        fails = Counter(reason.split(":")[0] for r in rows for reason in r["gate_reasons"])
+        passed = sum(r["gate_pass"] for r in rows)
+        _print({"written": path, "rows": len(rows), "passed": passed, "fail_reasons": fails})
+    elif args.step == "pcm-rewrite":
+        goals = sources.english_goals(sources.tukabench_rows())
+        drafts = pidgin.read_draft("pcm_draft_mock" if args.mock else "pcm_draft")
+        pcm_rows, mix_rows = pidgin.build_rewrites(
+            goals, drafts, backend=args.backend, mock=args.mock, device=args.device
+        )
+        sfx = "_mock" if args.mock else ""
+        out = {}
+        for name, rows in (("pcm_candidates", pcm_rows), ("pcmen_draft", mix_rows)):
+            fails = Counter(x.split(":")[0] for r in rows for x in r["gate_reasons"])
+            out[name] = {
+                "written": pidgin.write_draft(name + sfx, rows),
+                "passed": sum(r["gate_pass"] for r in rows),
+                "fail_reasons": fails,
+            }
+        out["pcm_origin"] = Counter(r["origin"] for r in pcm_rows)
+        _print(out)
+    elif args.step == "fitset":
+        from oluso.data import fitset
+
+        test = testset.read_jsonl(testset.TEST_DIR / "tukabench.jsonl")
+        goals = sorted({r["goal_en"] for r in test if r["setting"] == "en"})
+        rows, report = fitset.build_english(goals)
+        out = fitset.translate_rows(rows, mock=args.mock, device=args.device)
+        path = pidgin.write_draft("fit_mt_mock" if args.mock else "fit_mt", out)
+        by_lang = Counter(r["setting"] for r in out if r.get("gate_pass", True))
+        _print({**report, "written": path, "passing_rows_by_setting": by_lang})
+    elif args.step == "verify":
+        res = testset.verify()
+        _print(res)
+        return 0 if all(res.values()) else 1
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="oluso")
     sub = p.add_subparsers(dest="cmd", required=True)
+
+    d = sub.add_parser("data", help="build and lock datasets")
+    d.add_argument("step", choices=["tukabench", "pcm-draft", "pcm-rewrite", "fitset", "verify"])
+    d.add_argument("--mock", action="store_true", help="offline: mock MT and language ID")
+    d.add_argument("--device", default=None)
+    d.add_argument("--backend", choices=["global", "tiny"], default="global",
+                   help="rewrite model for pcm-rewrite")  # fmt: skip
+    d.set_defaults(fn=cmd_data)
 
     sub.add_parser("env", help="print runtime environment").set_defaults(fn=cmd_env)
 

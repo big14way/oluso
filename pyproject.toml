@@ -22,6 +22,9 @@ dependencies = [
 
 [project.optional-dependencies]
 circuit = ["circuitkit==0.2.0"]
+data = [
+    "fasttext>=0.9.3",
+]
 
 [project.scripts]
 oluso = "oluso.cli:main"
