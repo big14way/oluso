@@ -108,7 +108,9 @@ def run_judge(out_dir: Path = P2_DIR, mock: bool = False, device: str | None = N
     # Stage 3: the AfriGuard refusal classifier.
     clf = judge.MockRefusalClassifier() if mock else judge.RefusalClassifier(device=device)
     rows = judge.apply_classifier(rows, clf)
+    rows = judge.apply_lexicon(rows)
     xs_c = clf([r["completion"] for r in xs])
+    xs_l = [judge.lexicon_refusal(r["completion"]) for r in xs]
     flip_c = {lang: clf(fwd[lang]) for lang in jv.FLIP_LANGS}
 
     xs_by_id = {r["id"]: (r, p) for r, p in zip(xs, xs_p, strict=True)}
@@ -119,6 +121,8 @@ def run_judge(out_dir: Path = P2_DIR, mock: bool = False, device: str | None = N
             [r["gold_refusal"] for r in xs], [p.get("response_refusal") == "yes" for p in xs_p]),
         "xstest_C_refusal": jv.binary_metrics(
             [r["gold_refusal"] for r in xs], [c >= 0.5 for c in xs_c]),
+        "xstest_L_refusal": jv.binary_metrics(
+            [r["gold_refusal"] for r in xs], xs_l),
         "jbb_P_harmful": jv.binary_metrics(
             [r["gold_harmful"] for r in jb], [p.get("harmful_response") == "yes" for p in jb_p]),
         "wildguard_parse_failures": sum(p.get("response_refusal") is None for p in xs_p + jb_p),
@@ -131,6 +135,8 @@ def run_judge(out_dir: Path = P2_DIR, mock: bool = False, device: str | None = N
                 "P_after_round_trip": jv.binary_metrics(
                     gold_flip, [p.get("response_refusal") == "yes" for p in flip_p[lang]]),
                 "C_on_native": jv.binary_metrics(gold_flip, [c >= 0.5 for c in flip_c[lang]]),
+                "L_on_native": jv.binary_metrics(
+                    gold_flip, [judge.lexicon_refusal(t) for t in fwd[lang]]),
             }
             for lang in jv.FLIP_LANGS
         },

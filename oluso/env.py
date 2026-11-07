@@ -19,6 +19,9 @@ def pick_device() -> str:
 
 
 def pick_dtype(device: str) -> torch.dtype:
+    forced = os.environ.get("OLUSO_DTYPE")  # e.g. float32 for batch-invariant evaluation runs
+    if forced:
+        return getattr(torch, forced)
     if device == "cuda":
         # T4 (Colab/Kaggle free tier) has no native bf16.
         return torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16

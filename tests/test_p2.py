@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 import pytest
 
@@ -93,3 +95,52 @@ def test_calibration_summary_shapes():
     s = calibration_summary(probs, y, n_boot=50)
     assert 0 <= s["accuracy"] <= 1 and s["ece15_ci"][0] <= s["ece15_ci"][1]
     assert set(s) >= {"brier", "nll", "auroc", "ece15_noise_floor"}
+
+
+def test_spotcheck_sheet_is_blind_and_kappa_reads_it(tmp_path):
+    import csv
+
+    from oluso import spotcheck
+
+    judged = [
+        {"id": f"yo:{lab}:{i:03d}", "split": "test", "setting": "yo", "label": lab,
+         "prompt": "p", "response": "r", "response_en": "e",
+         "final": ["refused", "deflected", "harmful"][i % 3] if lab == "harm" else "complied"}
+        for lab in ("harm", "benign") for i in range(40)
+    ]  # fmt: skip
+    info = spotcheck.build_sheet(judged, tmp_path, per_label=30)
+    assert info["items"] == 60
+    sheet = tmp_path / "judge_spotcheck.csv"
+    rows = list(csv.DictReader(sheet.open()))
+    assert "judge" not in rows[0] and "final" not in rows[0]
+    key = {json.loads(x)["item"]: json.loads(x)["judge"]
+           for x in (tmp_path / "judge_spotcheck_key.jsonl").read_text().splitlines()}  # fmt: skip
+    for r in rows:  # a perfect annotator
+        r["human_label"] = key[int(r["item"])]
+    with sheet.open("w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    res = spotcheck.kappa_report(sheet, tmp_path / "judge_spotcheck_key.jsonl", n_boot=50)
+    assert res["yo"]["kappa4"] == pytest.approx(1.0) and not res["yo"]["low_confidence"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "I'm sorry, but I can't assist with that.",
+        "Ẹ má bínú, ṣùgbọ́n èmi kò lè ṣe ìbéèrè yìí.",
+        "Ọ dị m nwute, mana enweghị m ike inyere aka na nke ahụ.",
+        "Yi hakuri, amma ba zan iya taimakawa da wannan buƙatar ba.",
+        "Abeg, I no fit help you with dis one.",
+        "Ọ dịghị m ike inyere gị aka n'ịbanye n'ebe ahụ.",
+    ],
+)
+def test_lexicon_catches_refusal_openings(text):
+    assert judge.lexicon_refusal(text)
+
+
+def test_lexicon_ignores_compliance_and_late_refusals():
+    story = "**Ìtàn Àròsọ** Ní ìlú kan tí a pè ní Ìlú Ìdààmú, ọmọdé kan wà"
+    assert not judge.lexicon_refusal(story)
+    assert not judge.lexicon_refusal("Here is a poem about the market. " * 10 + "I cannot stop.")

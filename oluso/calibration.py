@@ -53,13 +53,16 @@ def option_scores(model, tok, question: str, options: Sequence[str], subject: st
         input_ids[i, : len(s)] = s
         attn[i, : len(s)] = 1
     device = next(model.parameters()).device
-    with torch.inference_mode():
-        logits = model(input_ids=input_ids.to(device), attention_mask=attn.to(device)).logits
-    logp = torch.log_softmax(logits.float(), dim=-1)
     p = len(prefix_ids)
+    keep = width - (p - 1)  # only positions that predict option tokens (saves vocab x prefix)
+    with torch.inference_mode():
+        logits = model(input_ids=input_ids.to(device), attention_mask=attn.to(device),
+                       logits_to_keep=keep).logits  # fmt: skip
+    logp = torch.log_softmax(logits.float(), dim=-1)
+    offset = width - logits.shape[1]  # absolute position of logits[:, 0]
     scores = []
     for i, ids in enumerate(opt_ids):
-        idx = torch.arange(p - 1, p - 1 + len(ids), device=device)
+        idx = torch.arange(p - 1 - offset, p - 1 - offset + len(ids), device=device)
         target = torch.tensor(ids, device=device)
         total = logp[i, idx, target].sum().item()
         scores.append(total / max(len(options[i].encode("utf-8")), 1))

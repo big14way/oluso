@@ -16,6 +16,7 @@ REF="${OLUSO_REF:-main}"
 WORK="${WORK:-/tmp/oluso}"
 STEPS="${STEPS:-generate judge}"
 LIMIT_ARG=${P2_LIMIT:+--limit $P2_LIMIT}
+export OLUSO_DTYPE="${OLUSO_DTYPE:-float32}"  # bf16 left-padded batches drift from unbatched greedy
 
 git clone --quiet https://github.com/big14way/oluso.git "$WORK"
 cd "$WORK"

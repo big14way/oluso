@@ -166,6 +166,18 @@ def cmd_p2(args) -> int:
         _print(meta)
     elif args.step == "judge":
         _print(p2.run_judge(out_dir=run_dir, mock=args.mock, device=args.device, limit=args.limit))
+    elif args.step == "spotcheck":
+        from oluso import spotcheck
+
+        judged = [json.loads(x) for x in (run_dir / "judged.jsonl").read_text().splitlines() if x]
+        _print(spotcheck.build_sheet(judged, run_dir / "spotcheck"))
+    elif args.step == "kappa":
+        from oluso import spotcheck
+
+        d = run_dir / "spotcheck"
+        res = spotcheck.kappa_report(d / "judge_spotcheck.csv", d / "judge_spotcheck_key.jsonl")
+        (run_dir / "kappa.json").write_text(json.dumps(res, indent=2) + "\n")
+        _print(res)
     elif args.step == "table":
         out = Path(args.out_dir) if args.out_dir else None
         before = report.before_table(run_dir, out)
@@ -202,7 +214,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("env", help="print runtime environment").set_defaults(fn=cmd_env)
 
     q = sub.add_parser("p2", help="baseline: generate, judge, before-table")
-    q.add_argument("step", choices=["generate", "judge", "table"])
+    q.add_argument("step", choices=["generate", "judge", "spotcheck", "kappa", "table"])
     q.add_argument("--backend", choices=["hf", "tiny", "mock"], default="hf")
     q.add_argument("--mock", action="store_true", help="judge: offline mock judges")
     q.add_argument("--device", default=None)
