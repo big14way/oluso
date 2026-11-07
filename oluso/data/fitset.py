@@ -152,3 +152,57 @@ def translate_rows(
                 }
             )
     return out
+
+
+def finalize(build_dir, out_path, qe_quantile: float = 0.10) -> dict:
+    """Apply gates to the translated fit rows and write the final steering fit/dev set.
+
+    yo/ig/ha: language ID, length and refusal gates, plus SSA-COMET-QE at or above the
+    `qe_quantile` of TukaBench's human-corrected translations in the same language
+    (back-translation through M2M-100 418M proved degenerate for these languages).
+    pcm: language ID, length, refusal and back-translation gates (MAFAND pcm->en).
+    en: kept as is.
+    """
+    import json
+
+    rows = [json.loads(x) for x in (build_dir / "fit_mt.jsonl").read_text().splitlines() if x]
+    qe = [json.loads(x) for x in (build_dir / "qe_scores.jsonl").read_text().splitlines() if x]
+    human: dict[str, list[float]] = {}
+    fit_qe: dict[str, float] = {}
+    for r in qe:
+        if r["kind"] == "tukabench_human":
+            human.setdefault(r["id"].split(":")[0], []).append(r["qe"])
+        else:
+            fit_qe[r["id"]] = r["qe"]
+    thresholds = {
+        lang: float(sorted(v)[int(qe_quantile * (len(v) - 1))]) for lang, v in human.items()
+    }
+
+    kept, dropped = [], {}
+    for r in rows:
+        lang = r["setting"]
+        ok = r.get("gate_pass", True)
+        reasons = list(r.get("gate_reasons", []))
+        if lang in thresholds:
+            r["qe"] = fit_qe[r["id"]]
+            if r["qe"] < thresholds[lang]:
+                ok = False
+                reasons.append(f"qe:{r['qe']:.3f}<{thresholds[lang]:.3f}")
+        if ok:
+            kept.append(r)
+        else:
+            dropped[lang] = dropped.get(lang, 0) + 1
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", encoding="utf-8") as f:
+        for r in sorted(kept, key=lambda r: r["id"]):
+            f.write(json.dumps(r, ensure_ascii=False, sort_keys=True) + "\n")
+    counts: dict[str, int] = {}
+    for r in kept:
+        key = f"{r['setting']}/{r['side']}/{r['split']}"
+        counts[key] = counts.get(key, 0) + 1
+    return {
+        "qe_thresholds": thresholds,
+        "kept": len(kept),
+        "dropped": dropped,
+        "counts": dict(sorted(counts.items())),
+    }

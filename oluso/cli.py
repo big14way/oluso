@@ -100,6 +100,14 @@ def cmd_data(args) -> int:
         path = pidgin.write_draft("fit_mt_mock" if args.mock else "fit_mt", out)
         by_lang = Counter(r["setting"] for r in out if r.get("gate_pass", True))
         _print({**report, "written": path, "passing_rows_by_setting": by_lang})
+    elif args.step == "fitset-finalize":
+        from oluso import config
+        from oluso.data import fitset
+
+        out = config.ROOT / "data" / "fit" / "fit.jsonl"
+        report = fitset.finalize(pidgin.BUILD_DIR, out)
+        report["sha256"] = testset.sha256(out)
+        _print({**report, "written": str(out.relative_to(config.ROOT))})
     elif args.step == "verify":
         res = testset.verify()
         _print(res)
@@ -114,7 +122,15 @@ def main(argv: list[str] | None = None) -> int:
     d = sub.add_parser("data", help="build and lock datasets")
     d.add_argument(
         "step",
-        choices=["tukabench", "pcm-draft", "pcm-rewrite", "pcm-finalize", "fitset", "verify"],
+        choices=[
+            "tukabench",
+            "pcm-draft",
+            "pcm-rewrite",
+            "pcm-finalize",
+            "fitset",
+            "fitset-finalize",
+            "verify",
+        ],
     )
     d.add_argument("--mock", action="store_true", help="offline: mock MT and language ID")
     d.add_argument("--device", default=None)

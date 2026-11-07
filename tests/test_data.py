@@ -111,3 +111,30 @@ def test_codemix_gate():
     assert ok, reasons
     ok, reasons, _ = check_codemix(en, en, None, [("eng_Latn", 0.99)])
     assert not ok and "no_pidgin_markers" in reasons
+
+
+def test_fitset_finalize_applies_human_qe_threshold(tmp_path):
+    from oluso.data import fitset
+
+    b = tmp_path / "build"
+    b.mkdir()
+    fit = [
+        {"id": "fit:en:harm:000", "setting": "en", "side": "harm", "split": "fit", "en": "x"},
+        {"id": "fit:yo:harm:000", "setting": "yo", "side": "harm", "split": "fit", "en": "x",
+         "gate_pass": True, "gate_reasons": []},
+        {"id": "fit:yo:harm:001", "setting": "yo", "side": "harm", "split": "dev", "en": "y",
+         "gate_pass": True, "gate_reasons": []},
+    ]  # fmt: skip
+    qe = [
+        {"id": f"yo:harm:{i:03d}", "kind": "tukabench_human", "qe": 0.5 + i / 100}
+        for i in range(11)
+    ]
+    qe += [
+        {"id": "fit:yo:harm:000", "kind": "fit_nllb", "qe": 0.60},
+        {"id": "fit:yo:harm:001", "kind": "fit_nllb", "qe": 0.40},
+    ]
+    (b / "fit_mt.jsonl").write_text("".join(json.dumps(r) + "\n" for r in fit))
+    (b / "qe_scores.jsonl").write_text("".join(json.dumps(r) + "\n" for r in qe))
+    rep = fitset.finalize(b, tmp_path / "fit.jsonl")
+    assert rep["qe_thresholds"]["yo"] == pytest.approx(0.51)
+    assert rep["kept"] == 2 and rep["dropped"] == {"yo": 1}
