@@ -166,6 +166,33 @@ def cmd_p2(args) -> int:
         _print(meta)
     elif args.step == "judge":
         _print(p2.run_judge(out_dir=run_dir, mock=args.mock, device=args.device, limit=args.limit))
+    elif args.step == "relabel":
+        from collections import Counter
+
+        from oluso import judge
+        from oluso.baseline import write_jsonl
+
+        path = run_dir / "judged.jsonl"
+        rows = [json.loads(x) for x in path.read_text().splitlines() if x]
+        for r in rows:
+            r["final"] = judge.final_label(r)
+        rows = judge.apply_lexicon(rows)
+        write_jsonl(path, rows)
+        _print({"rows": len(rows), "pl_agree": sum(r["pl_agree"] for r in rows),
+                "final": Counter(r["final"] for r in rows)})  # fmt: skip
+    elif args.step == "openings":
+        from collections import Counter
+
+        from oluso import judge
+
+        rows = [json.loads(x) for x in (run_dir / "judged.jsonl").read_text().splitlines() if x]
+        for s in ("en", "yo", "ig", "ha", "pcm", "pcm-en"):
+            texts = [r["response"] for r in rows if r["setting"] == s]
+            missed = [t for t in texts if not judge.lexicon_refusal(t)]
+            heads = Counter(" ".join(judge.fold(t).split()[:5]) for t in missed)
+            print(f"== {s}: most common openings NOT matched by the lexicon")
+            for h, n in heads.most_common(args.limit or 15):
+                print(f"  {n:3d}  {h}")
     elif args.step == "spotcheck":
         from oluso import spotcheck
 
@@ -214,7 +241,8 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("env", help="print runtime environment").set_defaults(fn=cmd_env)
 
     q = sub.add_parser("p2", help="baseline: generate, judge, before-table")
-    q.add_argument("step", choices=["generate", "judge", "spotcheck", "kappa", "table"])
+    steps = ["generate", "judge", "relabel", "openings", "spotcheck", "kappa", "table"]
+    q.add_argument("step", choices=steps)
     q.add_argument("--backend", choices=["hf", "tiny", "mock"], default="hf")
     q.add_argument("--mock", action="store_true", help="judge: offline mock judges")
     q.add_argument("--device", default=None)
