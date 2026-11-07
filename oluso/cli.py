@@ -149,6 +149,30 @@ def cmd_data(args) -> int:
     return 0
 
 
+def cmd_p2(args) -> int:
+    from pathlib import Path
+
+    from oluso import p2, report
+
+    run_dir = Path(args.run_dir)
+    if args.step == "generate":
+        meta = p2.run_generate(
+            backend=args.backend,
+            device=args.device,
+            batch_size=args.batch_size,
+            limit=args.limit,
+            out_dir=run_dir,
+        )
+        _print(meta)
+    elif args.step == "judge":
+        _print(p2.run_judge(out_dir=run_dir, mock=args.mock, device=args.device, limit=args.limit))
+    elif args.step == "table":
+        out = Path(args.out_dir) if args.out_dir else None
+        before = report.before_table(run_dir, out)
+        print(report.markdown(before))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="oluso")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -176,6 +200,17 @@ def main(argv: list[str] | None = None) -> int:
     d.set_defaults(fn=cmd_data)
 
     sub.add_parser("env", help="print runtime environment").set_defaults(fn=cmd_env)
+
+    q = sub.add_parser("p2", help="baseline: generate, judge, before-table")
+    q.add_argument("step", choices=["generate", "judge", "table"])
+    q.add_argument("--backend", choices=["hf", "tiny", "mock"], default="hf")
+    q.add_argument("--mock", action="store_true", help="judge: offline mock judges")
+    q.add_argument("--device", default=None)
+    q.add_argument("--batch-size", type=int, default=32)
+    q.add_argument("--limit", type=int, default=None, help="rows per stratum (smoke runs)")
+    q.add_argument("--run-dir", default="runs/p2")
+    q.add_argument("--out-dir", default=None, help="table: where to write (default results/)")
+    q.set_defaults(fn=cmd_p2)
 
     s = sub.add_parser("smoke", help="P0 gate: generate Yoruba with the target model")
     s.add_argument("--backend", choices=["hf", "tiny", "mock"], default="hf")
