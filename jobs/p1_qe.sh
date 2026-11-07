@@ -26,7 +26,7 @@ with open("/tmp/qe_in.jsonl", "w", encoding="utf-8") as f:
 print(len(rows), "rows to score")
 EOF
 
-uv run --isolated --no-project --python 3.11 --with "unbabel-comet==2.2.7" \
+uv run --isolated --no-project --python 3.11 --with "unbabel-comet==2.2.7" --with "setuptools<70" \
   python jobs/qe_score.py /tmp/qe_in.jsonl /tmp/qe_scores.jsonl
 
 NS=$(python3 -c "import json; print(json.load(open('records/hub.json'))['namespace'])")
