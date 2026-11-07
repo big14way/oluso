@@ -1,0 +1,13 @@
+{
+  "namespace": "alanmik",
+  "models": {
+    "title": "oluso-models",
+    "slug": "alanmik/oluso-models-6aeed012b9ec48969f52eae7",
+    "url": "https://huggingface.co/collections/alanmik/oluso-models-6aeed012b9ec48969f52eae7"
+  },
+  "datasets": {
+    "title": "oluso-datasets",
+    "slug": "alanmik/oluso-datasets-6aeed01398a541401bbce8c8",
+    "url": "https://huggingface.co/collections/alanmik/oluso-datasets-6aeed01398a541401bbce8c8"
+  }
+}

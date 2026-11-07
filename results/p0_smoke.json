@@ -1,0 +1,64 @@
+{
+  "gate": "P0: Tiny Aya Earth generates in Yoruba",
+  "timestamp": "2026-11-07T07:33:51+00:00",
+  "backend": "hf",
+  "model_id": "CohereLabs/tiny-aya-earth",
+  "revision": "0624fafbe200f930b89566fc4ec4da314ba48d89",
+  "device": "mps",
+  "load_seconds": 1100.7,
+  "env": {
+    "python": "3.12.13",
+    "platform": "macOS-27.2-arm64-arm-64bit",
+    "torch": "2.15.0",
+    "device": "mps",
+    "dtype": "bfloat16",
+    "hf_token": "present",
+    "transformers": "5.22.2",
+    "safetune": "0.1.12",
+    "auditkit": "1.1.3",
+    "curatorkit": "0.1.22"
+  },
+  "yoruba_outputs": "3/3",
+  "gate_passed": true,
+  "rows": [
+    {
+      "prompt": "Kí ni olú-ìlú orílẹ̀-èdè Nàìjíríà?",
+      "output": "Olú-ìlú orílẹ̀-èdè Nàìjíríà ni **Abuja**. A yan Abuja gẹ́gẹ́ bí olú-ìlú tuntun ní ọdún 1991, lẹ́yìn tí Lagos ti jẹ́ olú-ìlú fún ọ̀pọ̀ ọdún. Ìdí tí a fi yan Abuja ni pé ó wà ní àárín orílẹ̀-èdè, ó sì jẹ́ ibi tí ó rọrùn fún gbogbo àwọn ìpínlẹ̀ láti rìn kiri.",
+      "new_tokens": 117,
+      "seconds": 7.186243805665678,
+      "looks_yoruba": true,
+      "letters": 178,
+      "words": 55,
+      "dot_below": 14,
+      "tone_marks": 58,
+      "mark_density": 0.4044943820224719,
+      "function_word_ratio": 0.4727272727272727
+    },
+    {
+      "prompt": "Kọ gbólóhùn méjì nípa pàtàkì ẹ̀kọ́.",
+      "output": "**Gbólóhùn 1:**\nẸ̀kọ́ jẹ́ ìdílé ìmọ̀ tí ó ń fún ènìyàn ní ìmọ̀, ìṣirò, àti ìmọ̀-ẹ̀rọ láti ṣe àgbéyẹ̀wò ayé. Ó ń ṣí ọ̀nà fún ìdàgbàsókè, ìṣàkóso, àti ìdàgbàsókè ènìyàn, tí ó sì ń mú kí àwùjọ máa dàgbà ní ọ̀nà",
+      "new_tokens": 128,
+      "seconds": 7.186243805665678,
+      "looks_yoruba": true,
+      "letters": 144,
+      "words": 41,
+      "dot_below": 16,
+      "tone_marks": 70,
+      "mark_density": 0.5972222222222222,
+      "function_word_ratio": 0.4146341463414634
+    },
+    {
+      "prompt": "Ṣàlàyé bí a ṣe ń se ẹ̀wà ní ṣókí.",
+      "output": "Ẹ̀wà ṣókí jẹ́ ọ̀nà ìṣe àṣà tí ó ní ìtàn gígùn ní orílẹ̀-èdè Nàìjíríà, pàápàá jùlọ ní àwọn agbègbè Yorùbá. Àwọn ìlànà wọ̀nyí ni a máa ń lò láti ṣe ẹ̀wà ṣókí:\n\n### **1. Ìdáná àti Ìṣàkóso**\n- **Ìdáná:** A máa ń lo ìdáná",
+      "new_tokens": 128,
+      "seconds": 7.186243805665678,
+      "looks_yoruba": true,
+      "letters": 147,
+      "words": 42,
+      "dot_below": 15,
+      "tone_marks": 67,
+      "mark_density": 0.5578231292517006,
+      "function_word_ratio": 0.3333333333333333
+    }
+  ]
+}
