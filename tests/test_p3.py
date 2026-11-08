@@ -157,3 +157,22 @@ def test_paired_stats():
     assert adj["a"] == 0.03 and adj["b"] == pytest.approx(0.06) and adj["c"] == 0.06
     d, (lo, hi) = paired_cluster_delta(list(range(50)), [1.0] * 50, [0.0] * 25 + [1.0] * 25)
     assert d == pytest.approx(-0.5) and lo < -0.3 and hi <= 0
+
+
+def test_last_logits_proxy_defaults_and_passes_through():
+    calls = []
+
+    class Fake:
+        config = "cfg"
+
+        def __call__(self, **kw):
+            calls.append(kw)
+
+        def generate(self, **kw):
+            return "gen"
+
+    m = steer.LastLogits(Fake())
+    m(input_ids=1)
+    m(input_ids=1, logits_to_keep=7)
+    assert calls == [{"input_ids": 1, "logits_to_keep": 1}, {"input_ids": 1, "logits_to_keep": 7}]
+    assert m.generate() == "gen" and m.config == "cfg"

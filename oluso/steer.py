@@ -50,6 +50,26 @@ class Arm:
 BASE = Arm("base")
 
 
+class LastLogits:
+    """The model, except that a plain call computes logits for the last position only.
+
+    SafeTune's vector extraction and CAST's gate pass call the model just to read hidden
+    states through hooks; with a 262k vocabulary, logits at every position of a batch do
+    not fit in GPU memory (16 prompts x 390 tokens = 6 GiB in float32). An explicit
+    `logits_to_keep` (option and letter scoring) is respected; `generate` is untouched.
+    """
+
+    def __init__(self, model):
+        self.__dict__["_m"] = model
+
+    def __call__(self, *args, **kwargs):
+        kwargs.setdefault("logits_to_keep", 1)
+        return self.__dict__["_m"](*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self.__dict__["_m"], name)
+
+
 def fit_prompts(split: str = "fit") -> tuple[list[str], list[str]]:
     """(harmful, harmless) prompt texts of one split of the steering fit set, all languages."""
     rows = [r for r in testset.read_jsonl(FIT_PATH) if r["split"] == split]
@@ -63,6 +83,7 @@ def fit_artifacts(model, tok, layers: list[int], harm: list[str], safe: list[str
     """CAA vectors at each candidate layer, and one CAST gate."""
     from safetune.steer import CAAConfig, extract_caa_vectors, fit_cast_condition
 
+    model = LastLogits(model)
     vectors = {}
     for layer in layers:  # one layer per call: the extractor keeps full sequences in RAM
         cfg = CAAConfig(target_layers=[layer], pool_method="last_token")
@@ -130,6 +151,7 @@ def wrap(model, arm: Arm, art: dict):
 
     if arm.kind == "base":
         return model
+    model = LastLogits(model)
     v = art["vectors"][arm.layer]
     if arm.kind == "random":
         v = random_like(v, arm.seed)
@@ -161,7 +183,7 @@ def gate_report(gen, art: dict, rows: list[dict], batch_size: int = 16) -> dict:
 
     from safetune.steer import CASTModel
 
-    cast = CASTModel(gen.model, {}, condition=art["condition"], per_prompt_gate=True)
+    cast = CASTModel(LastLogits(gen.model), {}, condition=art["condition"], per_prompt_gate=True)
     hits: dict = defaultdict(lambda: [0, 0])
     for i in range(0, len(rows), batch_size):
         chunk = rows[i : i + batch_size]
