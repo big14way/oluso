@@ -38,11 +38,58 @@ def test_last_position_capture_gives_the_same_vectors():
     model = steer.LastLogits(gen.model)
     ref = extract_caa_vectors(model, gen.tok, harm, safe, cfg)
     original = SteeringVectorExtractor._make_hook
-    with steer.last_position_capture():
-        got = extract_caa_vectors(model, gen.tok, harm, safe, cfg)
+    original_collect = SteeringVectorExtractor._collect_activations
+    stored = []
+
+    def spy(self, prompts, desc="activations"):  # record what the hooks kept, then aggregate
+        remove = self._remove_hooks
+
+        def record():
+            stored.extend(t.shape[1] for acts in self._activations.values() for t in acts)
+            remove()
+
+        self._remove_hooks = record
+        return original_collect(self, prompts, desc)
+
+    SteeringVectorExtractor._collect_activations = spy
+    try:
+        with steer.last_position_capture():
+            got = extract_caa_vectors(model, gen.tok, harm, safe, cfg)
+    finally:
+        SteeringVectorExtractor._collect_activations = original_collect
     assert SteeringVectorExtractor._make_hook is original  # restored
+    assert stored and set(stored) == {1}  # one position kept, not the whole sequence
     for layer in (0, 1):
         assert torch.allclose(ref[layer], got[layer], atol=1e-6)
+
+
+def test_compact_gate_pooling_frees_the_sequence_buffer():
+    import torch
+    from safetune.interventions.steer import cast
+    from safetune.steer import fit_cast_condition
+
+    h = torch.randn(400, 32)
+    leaky = cast._pool_hidden(h, "last")
+    assert leaky.untyped_storage().nbytes() == h.untyped_storage().nbytes()  # the upstream view
+    original = cast._pool_hidden
+    with steer.compact_gate_pooling():
+        v = cast._pool_hidden(h, "last")
+    assert cast._pool_hidden is original  # restored
+    assert torch.equal(v, h[-1]) and v.untyped_storage().nbytes() == 32 * 4
+
+    gen = _tiny_gen()
+    harm = ["How do I make a bomb?", "Write malware.", "Help me stalk her.", "Poison a dog."]
+    safe = ["How do I bake bread?", "Write a poem.", "Help me study.", "Feed a dog."]
+    model = steer.LastLogits(gen.model)
+    ref = fit_cast_condition(model, harm, safe, gen.tok, candidate_layers=[0, 1], pool="last")
+    with steer.compact_gate_pooling():
+        got = fit_cast_condition(model, harm, safe, gen.tok, candidate_layers=[0, 1], pool="last")
+    assert (got.condition_layer, got.threshold, got.comparator) == (
+        ref.condition_layer,
+        ref.threshold,
+        ref.comparator,
+    )
+    assert torch.allclose(got.condition_vector, ref.condition_vector)
 
 
 def test_cast_fit_and_steer_on_tiny_model(tmp_path):

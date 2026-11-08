@@ -105,6 +105,26 @@ def last_position_capture():
         SteeringVectorExtractor._make_hook = original
 
 
+@contextmanager
+def compact_gate_pooling():
+    """CAST's gate fit pools each prompt's (seq, hidden) activation with `h[-1, :]`, a view
+    that keeps the whole sequence buffer alive: ~3 MB per layer per prompt, 19 candidate
+    layers x 1,292 prompts ~ 80 GB of host RAM. Inside this block the pooled vector is a
+    copy, so the buffer is freed. Same values; the gate fit is unchanged."""
+    from safetune.interventions.steer import cast
+
+    original = cast._pool_hidden
+
+    def _pool_hidden(h_seq, pool):
+        return original(h_seq, pool).clone()
+
+    cast._pool_hidden = _pool_hidden
+    try:
+        yield
+    finally:
+        cast._pool_hidden = original
+
+
 def fit_artifacts(model, tok, layers: list[int], harm: list[str], safe: list[str],
                   gate_layers: list[int] | None = None, log=print) -> dict:  # fmt: skip
     """CAA vectors at each candidate layer, and one CAST gate."""
@@ -118,7 +138,9 @@ def fit_artifacts(model, tok, layers: list[int], harm: list[str], safe: list[str
     if log:
         for layer in layers:
             log(f"CAA vector at layer {layer}: norm {vectors[layer].norm():.2f}")
-    cond = fit_cast_condition(model, harm, safe, tok, candidate_layers=gate_layers, pool="last")
+    with compact_gate_pooling():
+        cond = fit_cast_condition(model, harm, safe, tok, candidate_layers=gate_layers,
+                                  pool="last")  # fmt: skip
     if log:
         log(f"CAST gate: layer {cond.condition_layer}, threshold {cond.threshold:.2f}, "
             f"{cond.comparator}, held-out F1 {cond.f1:.3f}")  # fmt: skip
