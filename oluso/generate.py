@@ -65,8 +65,11 @@ class HFGenerator:
         token = hf_token()
         try:
             self.tok = AutoTokenizer.from_pretrained(model_id, revision=revision, token=token)
+            # On CUDA load straight onto the GPU: a float32 copy in host RAM first
+            # (13 GB) leaves too little of a 15 GB job machine for anything else.
+            direct = {"device_map": self.device} if str(self.device).startswith("cuda") else {}
             self.model = AutoModelForCausalLM.from_pretrained(
-                model_id, revision=revision, token=token, dtype=dtype
+                model_id, revision=revision, token=token, dtype=dtype, **direct
             ).to(self.device)
         except (GatedRepoError, RepositoryNotFoundError, OSError) as exc:
             if isinstance(exc, OSError) and "gated" not in str(exc).lower():

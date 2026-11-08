@@ -78,17 +78,45 @@ def fit_prompts(split: str = "fit") -> tuple[list[str], list[str]]:
     return harm, safe
 
 
+@contextmanager
+def last_position_capture():
+    """SafeTune's extractor hook stores every position of every batch in host RAM and pools
+    afterwards; with last-token pooling only the last position is ever used. Inside this
+    block the hook stores just that position: the same vectors, a few MB instead of ~2 GB
+    per layer and side (which ran a 15 GB job machine out of memory)."""
+    from safetune.core.runtime.inference.vector_extraction import SteeringVectorExtractor
+
+    original = SteeringVectorExtractor._make_hook
+
+    def _make_hook(self, layer_idx: int):
+        if self.config.pool_method != "last_token":
+            return original(self, layer_idx)
+
+        def hook_fn(module, inp, out):
+            h = out[0] if isinstance(out, tuple) else out
+            self._activations.setdefault(layer_idx, []).append(h[:, -1:, :].detach().cpu())
+
+        return hook_fn
+
+    SteeringVectorExtractor._make_hook = _make_hook
+    try:
+        yield
+    finally:
+        SteeringVectorExtractor._make_hook = original
+
+
 def fit_artifacts(model, tok, layers: list[int], harm: list[str], safe: list[str],
                   gate_layers: list[int] | None = None, log=print) -> dict:  # fmt: skip
     """CAA vectors at each candidate layer, and one CAST gate."""
     from safetune.steer import CAAConfig, extract_caa_vectors, fit_cast_condition
 
     model = LastLogits(model)
-    vectors = {}
-    for layer in layers:  # one layer per call: the extractor keeps full sequences in RAM
-        cfg = CAAConfig(target_layers=[layer], pool_method="last_token")
-        vectors[layer] = extract_caa_vectors(model, tok, harm, safe, cfg)[layer].float().cpu()
-        if log:
+    cfg = CAAConfig(target_layers=list(layers), pool_method="last_token")
+    with last_position_capture():  # one pass for all layers
+        raw = extract_caa_vectors(model, tok, harm, safe, cfg)
+    vectors = {layer: raw[layer].float().cpu() for layer in layers}
+    if log:
+        for layer in layers:
             log(f"CAA vector at layer {layer}: norm {vectors[layer].norm():.2f}")
     cond = fit_cast_condition(model, harm, safe, tok, candidate_layers=gate_layers, pool="last")
     if log:

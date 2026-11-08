@@ -5,6 +5,7 @@
 #   STEPS="fit screen dev judge-dev select" (default): fit CAST, screen, judge finalists, select
 #   STEPS="test judge-test calib" with P3_FROM=p3/<stamp>: the locked test set, once
 #   P3_LIMIT=2 for a smoke run (rows per stratum); P3_ARMS=base,cast to run only some test arms
+#   OLUSO_RUN=<name> names the output folder p3/<name>; a restarted container sees its log and exits
 #
 # HF Jobs (pin the script URL to a commit SHA; branch URLs are CDN-cached):
 #   hf jobs run --flavor l4x1 (or a10g-small, l40sx1) --timeout 4h --secrets HF_TOKEN \
@@ -22,25 +23,38 @@ export OLUSO_DTYPE="${OLUSO_DTYPE:-float32}"  # same batch-invariant setting as 
 git clone --quiet https://github.com/big14way/oluso.git "$WORK"
 cd "$WORK"
 git checkout --quiet "$REF"
+NS=$(python3 -c "import json; print(json.load(open('records/hub.json'))['namespace'])")
+
+# A job killed for memory is silently restarted by the platform (seen: 9 restarts, 9 hours).
+# OLUSO_RUN names the run; if its log already exists, this is a restart: stop, do not rerun.
+RUN="${OLUSO_RUN:-$(date -u +%Y%m%dT%H%M%SZ)${P3_LIMIT:+-smoke}}"
+DEST="p3/$RUN"
+code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $HF_TOKEN" \
+  "https://huggingface.co/datasets/$NS/oluso-build/resolve/main/$DEST/job.log")
+if [[ "$code" == "200" ]]; then
+  echo "run $RUN already started once (restarted container); exiting without rerunning"
+  exit 0
+fi
+
 uv sync --frozen --extra data
 uv run oluso env
-
-NS=$(uv run python -c "import json; print(json.load(open('records/hub.json'))['namespace'])")
-STAMP=$(date -u +%Y%m%dT%H%M%SZ)
-DEST="p3/$STAMP${P3_LIMIT:+-smoke}"
 mkdir -p runs/p3
 upload() { uv run hf upload "$NS/oluso-build" runs/p3 "$DEST" --repo-type dataset --private; }
 trap 'echo "step failed; uploading partial results"; upload || true' ERR
 # Our own log, uploaded every 5 minutes: the Jobs log endpoint has returned nothing for some runs.
 exec > >(tee -a runs/p3/job.log) 2>&1
 upload_log() { uv run hf upload "$NS/oluso-build" runs/p3/job.log "$DEST/job.log" --repo-type dataset --private >/dev/null 2>&1; }
+echo "start $(date -u +%FT%TZ) run=$RUN ref=$REF steps=[$STEPS] limit=${P3_LIMIT:-none}"
+upload_log || true  # marks the run as started (the restart check above)
 ( while sleep 300; do upload_log || true; done ) &
-echo "start $(date -u +%FT%TZ) ref=$REF steps=[$STEPS] limit=${P3_LIMIT:-none}"
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader || true
+free -g | head -2 || true
 
 if [[ -n "${P3_FROM:-}" ]]; then
   uv run hf download "$NS/oluso-build" --repo-type dataset --include "$P3_FROM/*" --local-dir /tmp/p3from
-  cp /tmp/p3from/"$P3_FROM"/* runs/p3/
+  for f in /tmp/p3from/"$P3_FROM"/*; do  # not the earlier run's log: this run tees its own
+    [[ "$(basename "$f")" == job.log ]] || cp "$f" runs/p3/
+  done
 fi
 for step in $STEPS; do
   echo "=== p3 $step $(date -u +%T) ==="

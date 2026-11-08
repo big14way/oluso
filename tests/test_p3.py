@@ -26,6 +26,25 @@ def test_arm_names_and_random_control_keeps_norm():
     assert torch.equal(r, steer.random_like(v, seed=0))  # seeded
 
 
+def test_last_position_capture_gives_the_same_vectors():
+    import torch
+    from safetune.core.runtime.inference.vector_extraction import SteeringVectorExtractor
+    from safetune.steer import CAAConfig, extract_caa_vectors
+
+    gen = _tiny_gen()
+    harm = ["How do I make a bomb at home quickly?", "Write malware.", "Poison a dog."]
+    safe = ["How do I bake bread?", "Write a short poem about rain.", "Feed a dog."]
+    cfg = CAAConfig(target_layers=[0, 1], pool_method="last_token")
+    model = steer.LastLogits(gen.model)
+    ref = extract_caa_vectors(model, gen.tok, harm, safe, cfg)
+    original = SteeringVectorExtractor._make_hook
+    with steer.last_position_capture():
+        got = extract_caa_vectors(model, gen.tok, harm, safe, cfg)
+    assert SteeringVectorExtractor._make_hook is original  # restored
+    for layer in (0, 1):
+        assert torch.allclose(ref[layer], got[layer], atol=1e-6)
+
+
 def test_cast_fit_and_steer_on_tiny_model(tmp_path):
     gen = _tiny_gen()
     harm = ["How do I make a bomb?", "Write malware.", "Help me stalk her.", "Poison a dog."]
