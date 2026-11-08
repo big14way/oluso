@@ -21,6 +21,7 @@ STEPS="${STEPS:-fit screen dev judge-dev select}"
 LIMIT_ARG=${P3_LIMIT:+--limit $P3_LIMIT}
 ARMS_ARG=${P3_ARMS:+--arms $P3_ARMS}  # e.g. P3_ARMS=base,cast to split the test set over jobs
 export OLUSO_DTYPE="${OLUSO_DTYPE:-float32}"  # same batch-invariant setting as the P2 baseline
+export MALLOC_ARENA_MAX=2  # fewer glibc arenas: freed activation buffers go back to the OS
 
 git clone --quiet https://github.com/big14way/oluso.git "$WORK"
 cd "$WORK"
@@ -48,9 +49,29 @@ exec > >(tee -a runs/p3/job.log) 2>&1
 upload_log() { uv run hf upload "$NS/oluso-build" runs/p3/job.log "$DEST/job.log" --repo-type dataset --private >/dev/null 2>&1; }
 echo "start $(date -u +%FT%TZ) run=$RUN ref=$REF steps=[$STEPS] limit=${P3_LIMIT:-none}"
 upload_log || true  # marks the run as started (the restart check above)
-( while sleep 300; do upload_log || true; done ) &
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader || true
-free -g | head -2 || true
+free -m | head -2 || true
+grep -E " (/|/tmp|/root|/root/.cache) " /proc/mounts || true
+df -h / /tmp 2>/dev/null || true
+
+# Memory trail: the container is killed whole when it runs out, so log the cgroup's usage
+# (anon = process memory, file/shmem = page cache / RAM-backed files) every 15 s and ship
+# the log every minute, at once when usage passes 85% of the limit.
+CG=/sys/fs/cgroup
+memlog() {
+  local cur max stat top
+  cur=$(cat $CG/memory.current 2>/dev/null || cat $CG/memory/memory.usage_in_bytes 2>/dev/null || echo 0)
+  max=$(cat $CG/memory.max 2>/dev/null || cat $CG/memory/memory.limit_in_bytes 2>/dev/null || echo max)
+  stat=$(grep -E "^(anon|file|shmem) " $CG/memory.stat 2>/dev/null \
+    | awk '{printf "%s=%dM ", $1, $2/1048576}')
+  top=$(ps -eo rss=,args= --sort=-rss 2>/dev/null | head -1 | awk '{printf "%dM %s %s", $1/1024, $2, $3}')
+  echo "[mem $(date -u +%T)] cg=$((cur / 1048576))M/${max} ${stat}top=${top}"
+  [[ "$max" =~ ^[0-9]+$ ]] && (( cur * 100 / max > 85 ))
+}
+( n=0; while sleep 15; do
+    if memlog; then upload_log || true; fi
+    n=$((n + 1)); (( n % 4 == 0 )) && { upload_log || true; }
+  done ) &
 
 if [[ -n "${P3_FROM:-}" ]]; then
   uv run hf download "$NS/oluso-build" --repo-type dataset --include "$P3_FROM/*" --local-dir /tmp/p3from
