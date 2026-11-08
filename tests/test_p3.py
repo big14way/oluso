@@ -142,6 +142,16 @@ def test_mock_chain_end_to_end(tmp_path):
     assert info["arms"][3].startswith("add-")
     p3.run_judge("test", out_dir=tmp_path, mock=True)
     assert p3.run_calib(**kw, limit=2)["rows"] > 0
+    timing = json.loads((tmp_path / "test_timing.json").read_text())
+    assert set(timing) == set(info["arms"]) and timing["base"]["rows"] > 0
+    assert (tmp_path / "screen_timing.json").exists()
+    p3.run_answer("test", **kw, limit=1, kinds="random,add")
+    assert set(json.loads((tmp_path / "test_timing_random-add.json").read_text())) == set(
+        info["arms"][2:]
+    )
+    bench = p3.run_bench(**kw, dtype="float32", limit=1)
+    assert set(bench) >= {"base", info["arms"][1]}
+    assert (tmp_path / "bench_float32_timing.json").exists()
 
 
 def test_after_table_on_mock_runs(tmp_path):

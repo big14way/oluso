@@ -243,6 +243,8 @@ def cmd_p3(args) -> int:
         _print(res)
     elif args.step == "calib":
         _print(p3.run_calib(**gpu, limit=args.limit, kinds=args.arms))
+    elif args.step == "bench":
+        _print(p3.run_bench(**gpu, dtype=args.dtype, batch_size=64, limit=args.limit))
     elif args.step == "table":
         from oluso import report_after
 
@@ -293,7 +295,18 @@ def main(argv: list[str] | None = None) -> int:
     q.set_defaults(fn=cmd_p2)
 
     q = sub.add_parser("p3", help="repair: CAST steering fit, screen, dev selection, test arms")
-    steps = ["fit", "screen", "dev", "judge-dev", "select", "test", "judge-test", "calib", "table"]
+    steps = [
+        "fit",
+        "screen",
+        "dev",
+        "judge-dev",
+        "select",
+        "test",
+        "judge-test",
+        "calib",
+        "bench",
+        "table",
+    ]
     q.add_argument("step", choices=steps)
     q.add_argument("--backend", choices=["hf", "tiny", "mock"], default="hf")
     q.add_argument("--mock", action="store_true", help="judge: offline mock judges")
@@ -304,6 +317,7 @@ def main(argv: list[str] | None = None) -> int:
     q.add_argument("--p2-dir", default="runs/p2", help="table: the baseline run")
     q.add_argument("--arms", default=None, help="test/calib: comma list of arm kinds to run")
     q.add_argument("--out-dir", default=None, help="table: where to write (default results/)")
+    q.add_argument("--dtype", default="bfloat16", help="bench: serving dtype to time")
     q.set_defaults(fn=cmd_p3)
 
     s = sub.add_parser("smoke", help="P0 gate: generate Yoruba with the target model")

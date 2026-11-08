@@ -68,14 +68,42 @@ def _load(backend: str, device: str | None, out_dir: Path):
     return gen, art
 
 
-def _answer(gen, arms: list[Arm], art, rows, max_new_tokens: int, batch_size: int) -> list[dict]:
+def _answer(gen, arms: list[Arm], art, rows, max_new_tokens: int, batch_size: int,
+            timing: dict | None = None) -> list[dict]:  # fmt: skip
+    """Every arm's answers to `rows`; per-arm throughput goes into `timing` (ROI input)."""
     out = []
     for arm in arms:
         print(f"== {arm.name}: {len(rows)} prompts")
         with steer.steered(gen, arm, art):
-            answered, _ = baseline.generate(rows, gen, batch_size, max_new_tokens, log=None)
+            answered, meta = baseline.generate(rows, gen, batch_size, max_new_tokens, log=None)
         out += [{**r, "arm": arm.name, "arm_spec": arm.to_dict()} for r in answered]
+        if timing is not None:
+            timing[arm.name] = _throughput(answered, meta)
     return out
+
+
+def _throughput(answered: list[dict], meta: dict) -> dict:
+    new = sum(r.get("new_tokens") or 0 for r in answered)
+    sec = max(meta["seconds"], 1e-9)
+    return {"rows": len(answered), "seconds": meta["seconds"], "new_tokens": new,
+            "requests_per_hour": round(len(answered) / sec * 3600, 1),
+            "new_tokens_per_s": round(new / sec, 1), "dtype": meta["dtype"],
+            "batch_size": meta["batch_size"], "max_new_tokens": meta["max_new_tokens"],
+            "gpu": _gpu_name()}  # fmt: skip
+
+
+def _gpu_name() -> str | None:
+    try:
+        import torch
+
+        return torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
+    except ImportError:
+        return None
+
+
+def _write_timing(out_dir: Path, stage: str, timing: dict, kinds: str | None = None) -> None:
+    suffix = f"_{kinds.replace(',', '-')}" if kinds else ""
+    (out_dir / f"{stage}_timing{suffix}.json").write_text(json.dumps(timing, indent=2) + "\n")
 
 
 # --------------------------------------------------------------------------- GPU steps
@@ -105,7 +133,9 @@ def run_fit(backend="hf", device=None, out_dir: Path = P3_DIR, limit=None) -> di
 def run_screen(backend="hf", device=None, out_dir: Path = P3_DIR, batch_size=32, limit=None):
     gen, art = _load(backend, device, out_dir)
     arms = [BASE] + [Arm("cast", L, a) for L in LAYERS for a in ALPHAS]
-    rows = _answer(gen, arms, art, split_rows("dev", limit), SCREEN_TOKENS, batch_size)
+    timing: dict = {}
+    rows = _answer(gen, arms, art, split_rows("dev", limit), SCREEN_TOKENS, batch_size, timing)
+    _write_timing(out_dir, "screen", timing)
     for r in rows:
         r["l_refusal"] = judge.lexicon_refusal(r["response"])
     write_jsonl(out_dir / "screen_responses.jsonl", rows)
@@ -131,8 +161,11 @@ def run_answer(stage: str, backend="hf", device=None, out_dir: Path = P3_DIR, ba
     else:
         arms = [BASE] + test_arms(json.loads((out_dir / "selection.json").read_text())["selected"])
     arms = _only(arms, kinds)
-    rows = _answer(gen, arms, art, split_rows(stage, limit), baseline.MAX_NEW_TOKENS, batch_size)
+    timing: dict = {}
+    rows = _answer(gen, arms, art, split_rows(stage, limit), baseline.MAX_NEW_TOKENS, batch_size,
+                   timing)  # fmt: skip
     write_jsonl(out_dir / f"{stage}_responses.jsonl", rows)
+    _write_timing(out_dir, stage, timing, kinds)
     return {"stage": stage, "arms": [a.name for a in arms], "rows": len(rows)}
 
 
@@ -175,6 +208,37 @@ def run_calib(backend="hf", device=None, out_dir: Path = P3_DIR, limit=None,
         out += [{**s, "arm": arm.name} for s in scores]
     write_jsonl(out_dir / "calib_scores.jsonl", out)
     return {"arms": [a.name for a in arms], "rows": len(out)}
+
+
+def run_bench(backend="hf", device=None, out_dir: Path = P3_DIR, dtype="bfloat16",
+              batch_size=64, limit=None) -> dict:  # fmt: skip
+    """Throughput for the ROI section: base and the selected CAST arm on the dev prompts,
+    full 256-token answers, in a serving dtype. No answer is kept or judged; the
+    evaluation runs stay in float32 (batch-invariant), this only prices serving."""
+    import os
+
+    prev = os.environ.get("OLUSO_DTYPE")
+    os.environ["OLUSO_DTYPE"] = dtype
+    try:
+        gen, art = _load(backend, device, out_dir)
+    finally:
+        os.environ.pop("OLUSO_DTYPE") if prev is None else os.environ.update(OLUSO_DTYPE=prev)
+    arms = [BASE]
+    sel = out_dir / "selection.json"
+    if sel.exists():
+        s = json.loads(sel.read_text())["selected"]
+        arms.append(Arm("cast", s["layer"], s["alpha"]))
+    timing: dict = {}
+    _answer(gen, arms, art, split_rows("dev", limit), baseline.MAX_NEW_TOKENS, batch_size, timing)
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            timing["peak_gpu_gb"] = round(torch.cuda.max_memory_allocated() / 2**30, 2)
+    except ImportError:
+        pass
+    _write_timing(out_dir, f"bench_{dtype}", timing)
+    return timing
 
 
 # --------------------------------------------------------------------------- selection
