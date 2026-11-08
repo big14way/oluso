@@ -219,6 +219,32 @@ def cmd_p2(args) -> int:
     return 0
 
 
+def cmd_p3(args) -> int:
+    from pathlib import Path
+
+    from oluso import p3
+
+    run_dir = Path(args.run_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    gpu = {"backend": args.backend, "device": args.device, "out_dir": run_dir}
+    if args.step == "fit":
+        _print(p3.run_fit(**gpu, limit=args.limit))
+    elif args.step == "screen":
+        _print(p3.run_screen(**gpu, batch_size=args.batch_size, limit=args.limit))
+    elif args.step in ("dev", "test"):
+        _print(p3.run_answer(args.step, **gpu, batch_size=args.batch_size, limit=args.limit))
+    elif args.step.startswith("judge-"):
+        stage = args.step.removeprefix("judge-")
+        _print(p3.run_judge(stage, out_dir=run_dir, mock=args.mock, device=args.device))
+    elif args.step == "select":
+        res = p3.select(p3._read(run_dir / "dev_judged.jsonl"))
+        (run_dir / "selection.json").write_text(json.dumps(res, indent=2) + "\n")
+        _print(res)
+    elif args.step == "calib":
+        _print(p3.run_calib(**gpu, limit=args.limit))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="oluso")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -258,6 +284,17 @@ def main(argv: list[str] | None = None) -> int:
     q.add_argument("--run-dir", default="runs/p2")
     q.add_argument("--out-dir", default=None, help="table: where to write (default results/)")
     q.set_defaults(fn=cmd_p2)
+
+    q = sub.add_parser("p3", help="repair: CAST steering fit, screen, dev selection, test arms")
+    steps = ["fit", "screen", "dev", "judge-dev", "select", "test", "judge-test", "calib"]
+    q.add_argument("step", choices=steps)
+    q.add_argument("--backend", choices=["hf", "tiny", "mock"], default="hf")
+    q.add_argument("--mock", action="store_true", help="judge: offline mock judges")
+    q.add_argument("--device", default=None)
+    q.add_argument("--batch-size", type=int, default=32)
+    q.add_argument("--limit", type=int, default=None, help="rows per stratum (smoke runs)")
+    q.add_argument("--run-dir", default="runs/p3")
+    q.set_defaults(fn=cmd_p3)
 
     s = sub.add_parser("smoke", help="P0 gate: generate Yoruba with the target model")
     s.add_argument("--backend", choices=["hf", "tiny", "mock"], default="hf")
