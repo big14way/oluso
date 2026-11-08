@@ -115,8 +115,13 @@ def run_screen(backend="hf", device=None, out_dir: Path = P3_DIR, batch_size=32,
     return res
 
 
+def _only(arms: list[Arm], kinds: str | None) -> list[Arm]:
+    """Keep the arms whose kind is in a comma list (lets the test set run as parallel jobs)."""
+    return arms if not kinds else [a for a in arms if a.kind in kinds.split(",")]
+
+
 def run_answer(stage: str, backend="hf", device=None, out_dir: Path = P3_DIR, batch_size=32,
-               limit=None) -> dict:  # fmt: skip
+               limit=None, kinds: str | None = None) -> dict:  # fmt: skip
     """dev: base + screen finalists on the dev split; test: the three arms on the test set."""
     gen, art = _load(backend, device, out_dir)
     if stage == "dev":
@@ -125,6 +130,7 @@ def run_answer(stage: str, backend="hf", device=None, out_dir: Path = P3_DIR, ba
                          for f in finalists]  # fmt: skip
     else:
         arms = [BASE] + test_arms(json.loads((out_dir / "selection.json").read_text())["selected"])
+    arms = _only(arms, kinds)
     rows = _answer(gen, arms, art, split_rows(stage, limit), baseline.MAX_NEW_TOKENS, batch_size)
     write_jsonl(out_dir / f"{stage}_responses.jsonl", rows)
     return {"stage": stage, "arms": [a.name for a in arms], "rows": len(rows)}
@@ -151,12 +157,14 @@ def run_judge(stage: str, out_dir: Path = P3_DIR, mock=False, device=None) -> di
     return {"rows": len(rows), "final": dict(Counter((r["arm"], r["final"]) for r in rows))}
 
 
-def run_calib(backend="hf", device=None, out_dir: Path = P3_DIR, limit=None) -> dict:
+def run_calib(backend="hf", device=None, out_dir: Path = P3_DIR, limit=None,
+              kinds: str | None = None) -> dict:  # fmt: skip
     """AfriMMLU letter scores under base and each test arm (gate included), batched."""
     from oluso.p2 import _limit
 
     gen, art = _load(backend, device, out_dir)
-    arms = [BASE] + test_arms(json.loads((out_dir / "selection.json").read_text())["selected"])
+    selected = json.loads((out_dir / "selection.json").read_text())["selected"]
+    arms = _only([BASE] + test_arms(selected), kinds)
     items = _limit(baseline.afrimmlu_items(), limit, key=lambda r: (r["lang"], r["split"]))
     out = []
     for arm in arms:

@@ -4,7 +4,7 @@
 #
 #   STEPS="fit screen dev judge-dev select" (default): fit CAST, screen, judge finalists, select
 #   STEPS="test judge-test calib" with P3_FROM=p3/<stamp>: the locked test set, once
-#   P3_LIMIT=2 for a smoke run (rows per stratum)
+#   P3_LIMIT=2 for a smoke run (rows per stratum); P3_ARMS=base,cast to run only some test arms
 #
 # HF Jobs (pin the script URL to a commit SHA; branch URLs are CDN-cached):
 #   hf jobs run --flavor l4x1 (or a10g-small, l40sx1) --timeout 4h --secrets HF_TOKEN \
@@ -16,6 +16,7 @@ REF="${OLUSO_REF:-main}"
 WORK="${WORK:-/tmp/oluso}"
 STEPS="${STEPS:-fit screen dev judge-dev select}"
 LIMIT_ARG=${P3_LIMIT:+--limit $P3_LIMIT}
+ARMS_ARG=${P3_ARMS:+--arms $P3_ARMS}  # e.g. P3_ARMS=base,cast to split the test set over jobs
 export OLUSO_DTYPE="${OLUSO_DTYPE:-float32}"  # same batch-invariant setting as the P2 baseline
 
 git clone --quiet https://github.com/big14way/oluso.git "$WORK"
@@ -45,6 +46,7 @@ for step in $STEPS; do
   echo "=== p3 $step $(date -u +%T) ==="
   case "$step" in
     judge-*|select) uv run oluso p3 "$step" ;;
+    test|calib) uv run oluso p3 "$step" $LIMIT_ARG $ARMS_ARG ;;
     *) uv run oluso p3 "$step" $LIMIT_ARG ;;
   esac
   upload

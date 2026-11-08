@@ -232,7 +232,8 @@ def cmd_p3(args) -> int:
     elif args.step == "screen":
         _print(p3.run_screen(**gpu, batch_size=args.batch_size, limit=args.limit))
     elif args.step in ("dev", "test"):
-        _print(p3.run_answer(args.step, **gpu, batch_size=args.batch_size, limit=args.limit))
+        _print(p3.run_answer(args.step, **gpu, batch_size=args.batch_size, limit=args.limit,
+                             kinds=args.arms))  # fmt: skip
     elif args.step.startswith("judge-"):
         stage = args.step.removeprefix("judge-")
         _print(p3.run_judge(stage, out_dir=run_dir, mock=args.mock, device=args.device))
@@ -241,7 +242,7 @@ def cmd_p3(args) -> int:
         (run_dir / "selection.json").write_text(json.dumps(res, indent=2) + "\n")
         _print(res)
     elif args.step == "calib":
-        _print(p3.run_calib(**gpu, limit=args.limit))
+        _print(p3.run_calib(**gpu, limit=args.limit, kinds=args.arms))
     elif args.step == "table":
         from oluso import report_after
 
@@ -301,6 +302,7 @@ def main(argv: list[str] | None = None) -> int:
     q.add_argument("--limit", type=int, default=None, help="rows per stratum (smoke runs)")
     q.add_argument("--run-dir", default="runs/p3")
     q.add_argument("--p2-dir", default="runs/p2", help="table: the baseline run")
+    q.add_argument("--arms", default=None, help="test/calib: comma list of arm kinds to run")
     q.add_argument("--out-dir", default=None, help="table: where to write (default results/)")
     q.set_defaults(fn=cmd_p3)
 
