@@ -18,6 +18,8 @@ dependencies = [
     "safetune==0.1.12",
     "auditkit==1.1.3",
     "curatorkit[hf,generation]==0.1.22",
+    "scikit-learn>=1.4",
+    "scipy>=1.11",
 ]
 
 [project.optional-dependencies]
@@ -42,7 +44,7 @@ packages = ["oluso"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-extend-exclude = ["notebooks"]
+extend-exclude = ["notebooks", "cards"]  # cards are published dataset READMEs, kept byte-identical
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
