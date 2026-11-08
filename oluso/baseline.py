@@ -15,6 +15,7 @@ import hashlib
 import json
 import time
 from collections.abc import Callable
+from contextlib import contextmanager
 from pathlib import Path
 
 from oluso import config
@@ -138,6 +139,21 @@ def run_identity(gen, prompts: list[str], max_new_tokens: int, batch_size: int, 
     return f"oluso-chat:{arm}:{digest}"
 
 
+@contextmanager
+def never_replayed():
+    """Inside this block AuditKIT runs every generation instead of looking it up in its
+    on-disk run cache. A replayed run returns text but never calls our chat function, so
+    new-token counts and timings would be missing; generation is cheap to redo."""
+    from auditkit import runner
+
+    original = runner.DiskCache.get
+    runner.DiskCache.get = lambda self, fingerprint: None
+    try:
+        yield
+    finally:
+        runner.DiskCache.get = original
+
+
 def generate(
     rows: list[dict],
     gen,
@@ -157,7 +173,8 @@ def generate(
     fn = make_chat_fn(gen, batch_size, max_new_tokens, log=log)
     name = run_identity(gen, [r["prompt"] for r in rows], max_new_tokens, batch_size, arm)
     start = time.perf_counter()
-    answered = ak.generate(samples, fn, name=name)
+    with never_replayed():
+        answered = ak.generate(samples, fn, name=name)
     seconds = time.perf_counter() - start
     by_id = {s.id: s.actual_output or "" for s in answered}
     out = []
