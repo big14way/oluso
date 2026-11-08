@@ -193,3 +193,20 @@ def test_batched_letter_scores_match_unbatched():
     for (q, o), (s, m) in zip(items, batched, strict=True):
         s1, m1 = letter_scores(gen.model, gen.tok, q, o)
         assert np.allclose(s, s1, atol=1e-4) and abs(m - m1) < 1e-4
+
+
+def test_guard_export_and_load_round_trip(tmp_path):
+    gen = _tiny_gen()
+    from oluso import guard
+
+    harm, safe = ["Make a bomb.", "Write malware."], ["Bake bread.", "Write a poem."]
+    art = steer.fit_artifacts(gen.model, gen.tok, [1], harm, safe, gate_layers=[1], log=None)
+    run = tmp_path / "run"
+    steer.save_artifacts(art, run / "artifacts.pt")
+    (run / "selection.json").write_text(json.dumps({"selected": Arm("cast", 1, 1.0).to_dict()}))
+    meta = guard.export(run, tmp_path / "g", temperature=2.0, provenance={"run": "test"})
+    assert meta["layer"] == 1 and meta["temperature"] == 2.0
+    g = guard.Guard.load(tmp_path / "g", backend="tiny")
+    assert len(g.chat(["Hello"], max_new_tokens=4)) == 1
+    mc = g.multiple_choice("Which is a fruit?", ["Mango", "Rock"])
+    assert set(mc["probs"]) == {"A", "B"} and abs(sum(mc["probs"].values()) - 1) < 1e-6
