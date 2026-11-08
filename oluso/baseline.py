@@ -197,6 +197,17 @@ def score_afrimmlu(items: list[dict], gen, log: Callable | None = print) -> list
     return out
 
 
+def score_afrimmlu_letters(items: list[dict], gen, batch_size: int = 16) -> list[dict]:
+    """Letter view only, batched (steered arms; the letter view is the primary one)."""
+    from oluso.calibration import letter_scores_batch
+
+    res = letter_scores_batch(gen.model, gen.tok, [(it["question"], it["choices"]) for it in items],
+                              batch_size=batch_size)  # fmt: skip
+    return [{k: it[k] for k in ("id", "lang", "split", "k", "subject", "answer")}
+            | {"letter": [round(float(x), 6) for x in s], "letter_mass": round(m, 6)}
+            for it, (s, m) in zip(items, res, strict=True)]  # fmt: skip
+
+
 def mock_afrimmlu_scores(items: list[dict], seed: int = 0) -> list[dict]:
     """Offline stand-in: noisy scores that favour the right answer."""
     import numpy as np

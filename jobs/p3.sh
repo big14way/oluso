@@ -7,7 +7,7 @@
 #   P3_LIMIT=2 for a smoke run (rows per stratum)
 #
 # HF Jobs (pin the script URL to a commit SHA; branch URLs are CDN-cached):
-#   hf jobs run --flavor a10g-small --timeout 4h --secrets HF_TOKEN \
+#   hf jobs run --flavor l4x1 (or a10g-small, l40sx1) --timeout 4h --secrets HF_TOKEN \
 #     -e OLUSO_REF=<sha> ghcr.io/astral-sh/uv:python3.12-bookworm \
 #     bash -c "curl -fsSL https://raw.githubusercontent.com/big14way/oluso/<sha>/jobs/p3.sh | bash"
 set -euo pipefail

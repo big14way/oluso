@@ -42,8 +42,23 @@ def kind(arm: str) -> str:
 
 
 def arm_rows(p2_dir: Path, p3_dir: Path) -> list[dict]:
+    """Every arm's judged test rows; base comes from the P3 run when it re-ran it."""
+    rows = _read(p3_dir / "test_judged.jsonl")
+    if any(r["arm"] == "base" for r in rows):
+        return rows
     base = [{**r, "arm": "base"} for r in _read(p2_dir / "judged.jsonl") if r["split"] == "test"]
-    return base + _read(p3_dir / "test_judged.jsonl")
+    return base + rows
+
+
+def reproducibility(p2_dir: Path, rows: list[dict]) -> dict | None:
+    """Identical-answer rate of the P3 base re-run against P2 (different GPU, same settings)."""
+    p2 = {r["id"]: r for r in _read(p2_dir / "judged.jsonl") if r["split"] == "test"}
+    base = [r for r in rows if r["arm"] == "base" and r["id"] in p2]
+    if not base:
+        return None
+    same = sum(r["response"] == p2[r["id"]]["response"] for r in base)
+    label = sum(r["final"] == p2[r["id"]]["final"] for r in base)
+    return {"n": len(base), "identical_answer": same / len(base), "same_label": label / len(base)}
 
 
 def _pairs(rows: list[dict], a: str, b: str) -> list[tuple[dict, dict]]:
@@ -144,12 +159,13 @@ def after_table(p2_dir: Path, p3_dir: Path, out_dir: Path | None = None) -> dict
         "vs_base": {a: compare(rows, a) for a in arms if a != "base"},
         "vs_base_agreed": {a: compare(rows, a, key="final_agreed") for a in arms if a != "base"},
     }
+    res["base_reproducibility_vs_p2"] = reproducibility(p2_dir, rows)
     if "cast" in by_kind and "random" in by_kind:
         res["cast_vs_random"] = compare(rows, by_kind["cast"], ref=by_kind["random"])
     base_scores = _read(p2_dir / "afrimmlu_scores.jsonl")
     view = primary_view(base_scores)
     calib = {"base": calibration_arm(base_scores, view)}
-    if (p3_dir / "calib_scores.jsonl").exists():
+    if (p3_dir / "calib_scores.jsonl").exists():  # base re-scored there too: it replaces P2's
         steered = _read(p3_dir / "calib_scores.jsonl")
         for a in dict.fromkeys(r["arm"] for r in steered):
             calib[a] = calibration_arm([r for r in steered if r["arm"] == a], view)
@@ -208,6 +224,11 @@ def markdown(res: dict) -> str:
         lines.append(f"| {a} | {_pp(p['harmful'])} | {_pp(p['refused'])} "
                      f"| {_pp(p['culture_harmful'])} | {_pp(ni)} "
                      f"| {'yes' if ni['non_inferior'] else 'no'} |")  # fmt: skip
+    rep = res.get("base_reproducibility_vs_p2")
+    if rep:
+        lines += ["", f"Base re-run on the steering machine against the P2 baseline: "
+                  f"{100 * rep['identical_answer']:.1f}% identical answers, "
+                  f"{100 * rep['same_label']:.1f}% same judge label (n = {rep['n']})."]  # fmt: skip
     if "cast_vs_random" in res:
         p = res["cast_vs_random"]["pooled_non_english"]
         lines += ["", f"CAST against the random direction (same gate, layer, alpha), pooled "

@@ -72,6 +72,36 @@ def letter_scores(model, tok, question: str, options: Sequence[str], subject: st
     return scores, float(np.exp(scores).sum())
 
 
+def letter_scores_batch(model, tok, items: Sequence[tuple[str, Sequence[str]]],
+                        batch_size: int = 16) -> list[tuple[np.ndarray, float]]:  # fmt: skip
+    """letter_scores for many (question, options) at once: left-padded, last position only."""
+    import torch
+
+    out = []
+    device = next(model.parameters()).device
+    prev = tok.padding_side
+    tok.padding_side = "left"
+    try:
+        for i in range(0, len(items), batch_size):
+            chunk = items[i : i + batch_size]
+            texts = [tok.apply_chat_template(
+                [{"role": "user", "content": f"{mc_prompt(q, o)}\n\n{LETTER_INSTRUCTION}"}],
+                tokenize=False, add_generation_prompt=True) for q, o in chunk]  # fmt: skip
+            enc = tok(texts, return_tensors="pt", padding=True, add_special_tokens=False)
+            with torch.inference_mode():
+                logits = model(input_ids=enc.input_ids.to(device),
+                               attention_mask=enc.attention_mask.to(device),
+                               logits_to_keep=1).logits[:, -1]  # fmt: skip
+            logp = torch.log_softmax(logits.float(), dim=-1)
+            for row, (_, opts) in zip(logp, chunk, strict=True):
+                letters = letter_token_ids(tok, len(opts))
+                s = np.array([torch.logsumexp(row[t], 0).item() for t in letters])
+                out.append((s, float(np.exp(s).sum())))
+    finally:
+        tok.padding_side = prev
+    return out
+
+
 def option_scores(model, tok, question: str, options: Sequence[str], subject: str | None = None):
     """Summed log-probability of each option's text as the assistant reply."""
     import torch

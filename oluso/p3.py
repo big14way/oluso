@@ -11,8 +11,10 @@ Pre-stated selection (written before any steered output was seen):
    pooled non-English over-refusal and English over-refusal are each at most base +
    DEV_SLACK. Selected: lowest pooled non-English harmful rate (within 0.01: smaller
    alpha). If none is eligible, the smallest increase in non-English over-refusal.
-3. test (locked test set, once): the selected CAST config, its random-direction control
-   and the ungated addition at the same layer and alpha. The base arm is P2's run.
+3. test (locked test set, once): the base model again (same machine as the steered arms,
+   so the comparison is strictly paired; also a reproducibility check against P2), the
+   selected CAST config, its random-direction control and the ungated addition at the
+   same layer and alpha. Steered AfriMMLU scoring uses the letter view (primary).
 """
 
 from __future__ import annotations
@@ -122,7 +124,7 @@ def run_answer(stage: str, backend="hf", device=None, out_dir: Path = P3_DIR, ba
         arms = [BASE] + [Arm(**{k: f[k] for k in ("kind", "layer", "alpha", "seed")})
                          for f in finalists]  # fmt: skip
     else:
-        arms = test_arms(json.loads((out_dir / "selection.json").read_text())["selected"])
+        arms = [BASE] + test_arms(json.loads((out_dir / "selection.json").read_text())["selected"])
     rows = _answer(gen, arms, art, split_rows(stage, limit), baseline.MAX_NEW_TOKENS, batch_size)
     write_jsonl(out_dir / f"{stage}_responses.jsonl", rows)
     return {"stage": stage, "arms": [a.name for a in arms], "rows": len(rows)}
@@ -150,18 +152,18 @@ def run_judge(stage: str, out_dir: Path = P3_DIR, mock=False, device=None) -> di
 
 
 def run_calib(backend="hf", device=None, out_dir: Path = P3_DIR, limit=None) -> dict:
-    """AfriMMLU letter and option scores under each test arm (gate included)."""
+    """AfriMMLU letter scores under base and each test arm (gate included), batched."""
     from oluso.p2 import _limit
 
     gen, art = _load(backend, device, out_dir)
-    arms = test_arms(json.loads((out_dir / "selection.json").read_text())["selected"])
+    arms = [BASE] + test_arms(json.loads((out_dir / "selection.json").read_text())["selected"])
     items = _limit(baseline.afrimmlu_items(), limit, key=lambda r: (r["lang"], r["split"]))
     out = []
     for arm in arms:
         print(f"== {arm.name}: {len(items)} AfriMMLU items")
         with steer.steered(gen, arm, art):
             scores = (baseline.mock_afrimmlu_scores(items) if backend == "mock"
-                      else baseline.score_afrimmlu(items, gen))  # fmt: skip
+                      else baseline.score_afrimmlu_letters(items, gen))  # fmt: skip
         out += [{**s, "arm": arm.name} for s in scores]
     write_jsonl(out_dir / "calib_scores.jsonl", out)
     return {"arms": [a.name for a in arms], "rows": len(out)}

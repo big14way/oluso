@@ -119,7 +119,8 @@ def test_mock_chain_end_to_end(tmp_path):
     res = p3.select(p3._read(tmp_path / "dev_judged.jsonl"))
     (tmp_path / "selection.json").write_text(json.dumps(res))
     info = p3.run_answer("test", **kw, limit=1)
-    assert info["arms"][1].startswith("random-") and info["arms"][2].startswith("add-")
+    assert info["arms"][0] == "base" and info["arms"][2].startswith("random-")
+    assert info["arms"][3].startswith("add-")
     p3.run_judge("test", out_dir=tmp_path, mock=True)
     assert p3.run_calib(**kw, limit=2)["rows"] > 0
 
@@ -146,6 +147,7 @@ def test_after_table_on_mock_runs(tmp_path):
     md = (tmp_path / "out" / "p3_after.md").read_text()
     assert "Non-inferior" in md and "CAST against the random direction" in md
     assert set(res["calibration"]) == {"base", "cast-L14-a1", "random-L14-a1", "add-L14-a1"}
+    assert res["base_reproducibility_vs_p2"]["identical_answer"] == 1.0  # mock is deterministic
 
 
 def test_paired_stats():
@@ -176,3 +178,18 @@ def test_last_logits_proxy_defaults_and_passes_through():
     m(input_ids=1, logits_to_keep=7)
     assert calls == [{"input_ids": 1, "logits_to_keep": 1}, {"input_ids": 1, "logits_to_keep": 7}]
     assert m.generate() == "gen" and m.config == "cfg"
+
+
+def test_batched_letter_scores_match_unbatched():
+    gen = _tiny_gen()
+    import numpy as np
+
+    from oluso.calibration import letter_scores, letter_scores_batch
+
+    items = [("Which is a fruit?", ["Mango", "Chair", "Rock", "Sand"]),
+             ("Ọ̀rọ̀ wo ni ẹranko?", ["Ajá", "Àga", "Òkúta", "Iyanrìn"]),
+             ("2+2?", ["3", "4", "5", "22"])]  # fmt: skip
+    batched = letter_scores_batch(gen.model, gen.tok, items, batch_size=2)
+    for (q, o), (s, m) in zip(items, batched, strict=True):
+        s1, m1 = letter_scores(gen.model, gen.tok, q, o)
+        assert np.allclose(s, s1, atol=1e-4) and abs(m - m1) < 1e-4
