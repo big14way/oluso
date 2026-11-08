@@ -116,22 +116,48 @@ def _common_prefix(a: list, b: list) -> list:
     return out
 
 
+def run_identity(gen, prompts: list[str], max_new_tokens: int, batch_size: int, arm: str) -> str:
+    """AuditKIT's name for one generation run, which goes into its run fingerprint.
+
+    AuditKIT caches whole runs on disk by fingerprint, and for a callable model the
+    fingerprint sees the callable's name and the scenario's name, not the prompts, the
+    decoding settings or any steering hooks. Unnamed, every steered arm in one process
+    got the first arm's answers back from the cache. This name covers everything that
+    decides a greedy answer, so equal names really mean equal outputs."""
+    key = {
+        "model": getattr(gen, "model_id", getattr(gen, "name", "mock")),
+        "revision": getattr(gen, "revision", None),
+        "dtype": str(getattr(getattr(gen, "model", None), "dtype", None)),
+        "template": template_fingerprint(gen)["sha256"],
+        "arm": arm,
+        "max_new_tokens": max_new_tokens,
+        "batch_size": batch_size,
+        "prompts": hashlib.sha256("\x1e".join(prompts).encode()).hexdigest(),
+    }
+    digest = hashlib.sha256(json.dumps(key, sort_keys=True).encode()).hexdigest()[:16]
+    return f"oluso-chat:{arm}:{digest}"
+
+
 def generate(
     rows: list[dict],
     gen,
     batch_size: int = 32,
     max_new_tokens: int = MAX_NEW_TOKENS,
     log: Callable | None = print,
+    arm: str = "base",
 ) -> tuple[list[dict], dict]:
-    """Answer every row through AuditKIT; returns (rows with `response`, run metadata)."""
+    """Answer every row through AuditKIT; returns (rows with `response`, run metadata).
+
+    `arm` names the steering arm active on `gen` (it keys AuditKIT's run cache)."""
     import auditkit as ak
 
     samples = [
         ak.Sample(input=r["prompt"], id=r["id"], task=f"{r['setting']}/{r['label']}") for r in rows
     ]
     fn = make_chat_fn(gen, batch_size, max_new_tokens, log=log)
+    name = run_identity(gen, [r["prompt"] for r in rows], max_new_tokens, batch_size, arm)
     start = time.perf_counter()
-    answered = ak.generate(samples, fn)
+    answered = ak.generate(samples, fn, name=name)
     seconds = time.perf_counter() - start
     by_id = {s.id: s.actual_output or "" for s in answered}
     out = []
@@ -150,6 +176,7 @@ def generate(
         "template": template_fingerprint(gen),
         "rows": len(out),
         "seconds": round(seconds, 1),
+        "auditkit_run": name,
     }
     return out, meta
 

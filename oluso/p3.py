@@ -75,7 +75,8 @@ def _answer(gen, arms: list[Arm], art, rows, max_new_tokens: int, batch_size: in
     for arm in arms:
         print(f"== {arm.name}: {len(rows)} prompts")
         with steer.steered(gen, arm, art):
-            answered, meta = baseline.generate(rows, gen, batch_size, max_new_tokens, log=None)
+            answered, meta = baseline.generate(rows, gen, batch_size, max_new_tokens, log=None,
+                                               arm=arm.name)  # fmt: skip
         out += [{**r, "arm": arm.name, "arm_spec": arm.to_dict()} for r in answered]
         if timing is not None:
             timing[arm.name] = _throughput(answered, meta)
