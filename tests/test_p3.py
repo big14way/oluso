@@ -122,3 +122,38 @@ def test_mock_chain_end_to_end(tmp_path):
     assert info["arms"][1].startswith("random-") and info["arms"][2].startswith("add-")
     p3.run_judge("test", out_dir=tmp_path, mock=True)
     assert p3.run_calib(**kw, limit=2)["rows"] > 0
+
+
+def test_after_table_on_mock_runs(tmp_path):
+    from oluso import p2, report_after
+
+    p2_dir, p3_dir = tmp_path / "p2", tmp_path / "p3"
+    p2.run_generate(backend="mock", limit=2, out_dir=p2_dir)
+    p2.run_judge(out_dir=p2_dir, mock=True, limit=2)
+    from oluso import judge
+
+    rows = p3._read(p2_dir / "judged.jsonl")
+    p3.write_jsonl(p2_dir / "judged.jsonl", judge.apply_lexicon(rows))
+    kw = {"backend": "mock", "device": None, "out_dir": p3_dir}
+    p3.run_fit(**kw, limit=1)
+    sel = {"selected": Arm("cast", 14, 1.0).to_dict(), "reason": "test"}
+    (p3_dir / "selection.json").write_text(json.dumps(sel))
+    p3.run_answer("test", **kw, limit=2)
+    p3.run_judge("test", out_dir=p3_dir, mock=True)
+    p3.run_calib(**kw, limit=3)
+    res = report_after.after_table(p2_dir, p3_dir, tmp_path / "out")
+    assert set(res["vs_base"]) == {"cast-L14-a1", "random-L14-a1", "add-L14-a1"}
+    md = (tmp_path / "out" / "p3_after.md").read_text()
+    assert "Non-inferior" in md and "CAST against the random direction" in md
+    assert set(res["calibration"]) == {"base", "cast-L14-a1", "random-L14-a1", "add-L14-a1"}
+
+
+def test_paired_stats():
+    from oluso.stats import holm, mcnemar_exact, paired_cluster_delta
+
+    mc = mcnemar_exact([True] * 10 + [False] * 10, [False] * 10 + [False] * 10)
+    assert mc["base_only"] == 10 and mc["p"] < 0.01
+    adj = holm({"a": 0.01, "b": 0.04, "c": 0.03})
+    assert adj["a"] == 0.03 and adj["b"] == pytest.approx(0.06) and adj["c"] == 0.06
+    d, (lo, hi) = paired_cluster_delta(list(range(50)), [1.0] * 50, [0.0] * 25 + [1.0] * 25)
+    assert d == pytest.approx(-0.5) and lo < -0.3 and hi <= 0

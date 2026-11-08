@@ -242,6 +242,12 @@ def cmd_p3(args) -> int:
         _print(res)
     elif args.step == "calib":
         _print(p3.run_calib(**gpu, limit=args.limit))
+    elif args.step == "table":
+        from oluso import report_after
+
+        out = Path(args.out_dir) if args.out_dir else None
+        res = report_after.after_table(Path(args.p2_dir), run_dir, out)
+        print(report_after.markdown(res))
     return 0
 
 
@@ -286,7 +292,7 @@ def main(argv: list[str] | None = None) -> int:
     q.set_defaults(fn=cmd_p2)
 
     q = sub.add_parser("p3", help="repair: CAST steering fit, screen, dev selection, test arms")
-    steps = ["fit", "screen", "dev", "judge-dev", "select", "test", "judge-test", "calib"]
+    steps = ["fit", "screen", "dev", "judge-dev", "select", "test", "judge-test", "calib", "table"]
     q.add_argument("step", choices=steps)
     q.add_argument("--backend", choices=["hf", "tiny", "mock"], default="hf")
     q.add_argument("--mock", action="store_true", help="judge: offline mock judges")
@@ -294,6 +300,8 @@ def main(argv: list[str] | None = None) -> int:
     q.add_argument("--batch-size", type=int, default=32)
     q.add_argument("--limit", type=int, default=None, help="rows per stratum (smoke runs)")
     q.add_argument("--run-dir", default="runs/p3")
+    q.add_argument("--p2-dir", default="runs/p2", help="table: the baseline run")
+    q.add_argument("--out-dir", default=None, help="table: where to write (default results/)")
     q.set_defaults(fn=cmd_p3)
 
     s = sub.add_parser("smoke", help="P0 gate: generate Yoruba with the target model")

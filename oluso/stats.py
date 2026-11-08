@@ -45,3 +45,42 @@ def cluster_bootstrap_ratio(
             stats.append(s[0] / s[1])
     lo, hi = np.quantile(stats, [alpha / 2, 1 - alpha / 2])
     return float(point), (float(lo), float(hi))
+
+
+def mcnemar_exact(base: list[bool], arm: list[bool]) -> dict:
+    """Exact two-sided McNemar test on paired binary outcomes (same items, two systems)."""
+    from scipy.stats import binomtest
+
+    base_only = sum(1 for a, b in zip(base, arm, strict=True) if a and not b)
+    arm_only = sum(1 for a, b in zip(base, arm, strict=True) if b and not a)
+    n = base_only + arm_only
+    p = float(binomtest(base_only, n, 0.5).pvalue) if n else 1.0
+    return {"base_only": base_only, "arm_only": arm_only, "p": p}
+
+
+def holm(pvals: dict) -> dict:
+    """Holm step-down adjusted p-values (family-wise error)."""
+    order = sorted(pvals, key=pvals.get)
+    m, running, out = len(order), 0.0, {}
+    for i, k in enumerate(order):
+        running = max(running, min(1.0, (m - i) * pvals[k]))
+        out[k] = running
+    return out
+
+
+def paired_cluster_delta(
+    clusters: list, base: list[float], arm: list[float], n_boot: int = 2000, seed: int = 0,
+    alpha: float = 0.05,
+) -> tuple[float, tuple[float, float]]:  # fmt: skip
+    """mean(arm) - mean(base) over paired rows; percentile CI from resampling clusters."""
+    by: dict = defaultdict(lambda: [0.0, 0.0, 0.0])
+    for c, a, b in zip(clusters, base, arm, strict=True):
+        by[c][0] += b - a
+        by[c][1] += 1
+    arr = np.array([v[:2] for v in by.values()])
+    point = arr[:, 0].sum() / arr[:, 1].sum()
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, len(arr), (n_boot, len(arr)))
+    sums = arr[idx].sum(axis=1)
+    lo, hi = np.quantile(sums[:, 0] / sums[:, 1], [alpha / 2, 1 - alpha / 2])
+    return float(point), (float(lo), float(hi))
