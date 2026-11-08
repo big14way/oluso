@@ -107,22 +107,61 @@ def last_position_capture():
 
 @contextmanager
 def compact_gate_pooling():
-    """CAST's gate fit pools each prompt's (seq, hidden) activation with `h[-1, :]`, a view
-    that keeps the whole sequence buffer alive: ~3 MB per layer per prompt, 19 candidate
-    layers x 1,292 prompts ~ 80 GB of host RAM. Inside this block the pooled vector is a
-    copy, so the buffer is freed. Same values; the gate fit is unchanged."""
+    """CAST's gate fit copies each prompt's whole (seq, hidden) activation to host RAM at
+    every candidate layer, then pools it with `h[-1, :]`, a view that keeps the whole buffer
+    alive: ~3 MB per layer per prompt, 19 layers x 1,292 prompts ~ 80 GB. Even with the view
+    copied, ~25 variable-size multi-MB host buffers per prompt fragment the heap (+1 GB per
+    15 s on the job machine). Inside this block the gate's collector pools on the device and
+    moves only the pooled vector: same prompts, encoding and pooling, one prompt at a time,
+    so the gate fit is unchanged."""
+    import torch
+    from safetune._refusal_helpers import _encode_prompts, _get_decoder_layers
     from safetune.interventions.steer import cast
 
-    original = cast._pool_hidden
+    original = cast._collect_pooled_hidden
 
-    def _pool_hidden(h_seq, pool):
-        return original(h_seq, pool).clone()
+    def _collect_pooled_hidden(model, tokenizer, prompts, layer_indices, pool="mean",
+                               batch_size=8, chat_template=True):  # fmt: skip
+        layers = _get_decoder_layers(model)
+        for li in layer_indices:
+            if not 0 <= li < len(layers):
+                raise IndexError(f"condition layer {li} out of range ({len(layers)} layers)")
+        captured: dict = {}
 
-    cast._pool_hidden = _pool_hidden
+        def mk(li):
+            def hook(_m, _i, out):
+                h = out[0] if isinstance(out, tuple) else out
+                captured[li] = cast._pool_hidden(h[0].detach().float(), pool).cpu()
+
+            return hook
+
+        handles = [layers[li].register_forward_hook(mk(li)) for li in layer_indices]
+        out: dict = {li: [] for li in layer_indices}
+        try:
+            model.eval()
+            device = next(model.parameters()).device
+            for p in prompts:
+                captured.clear()
+                enc = _encode_prompts(tokenizer, [p], chat_template, return_tensors="pt",
+                                      padding=True, truncation=True)  # fmt: skip
+                enc = {k: (v.to(device) if hasattr(v, "to") else v) for k, v in dict(enc).items()}
+                with torch.no_grad():
+                    model(**enc)
+                for li in layer_indices:
+                    if li in captured:
+                        out[li].append(captured[li])
+        finally:
+            for hd in handles:
+                hd.remove()
+        if any(not v for v in out.values()):
+            raise RuntimeError("gate fit: no activations captured")
+        return {li: torch.stack(v, dim=0) for li, v in out.items()}
+
+    cast._collect_pooled_hidden = _collect_pooled_hidden
     try:
         yield
     finally:
-        cast._pool_hidden = original
+        cast._collect_pooled_hidden = original
 
 
 def fit_artifacts(model, tok, layers: list[int], harm: list[str], safe: list[str],

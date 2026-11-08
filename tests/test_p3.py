@@ -63,27 +63,40 @@ def test_last_position_capture_gives_the_same_vectors():
         assert torch.allclose(ref[layer], got[layer], atol=1e-6)
 
 
-def test_compact_gate_pooling_frees_the_sequence_buffer():
+def test_compact_gate_pooling_moves_only_pooled_vectors():
     import torch
     from safetune.interventions.steer import cast
     from safetune.steer import fit_cast_condition
 
     h = torch.randn(400, 32)
-    leaky = cast._pool_hidden(h, "last")
-    assert leaky.untyped_storage().nbytes() == h.untyped_storage().nbytes()  # the upstream view
-    original = cast._pool_hidden
-    with steer.compact_gate_pooling():
-        v = cast._pool_hidden(h, "last")
-    assert cast._pool_hidden is original  # restored
-    assert torch.equal(v, h[-1]) and v.untyped_storage().nbytes() == 32 * 4
+    assert cast._pool_hidden(h, "last").untyped_storage().nbytes() == h.untyped_storage().nbytes()
 
     gen = _tiny_gen()
     harm = ["How do I make a bomb?", "Write malware.", "Help me stalk her.", "Poison a dog."]
     safe = ["How do I bake bread?", "Write a poem.", "Help me study.", "Feed a dog."]
     model = steer.LastLogits(gen.model)
-    ref = fit_cast_condition(model, harm, safe, gen.tok, candidate_layers=[0, 1], pool="last")
+    ref_h = cast._collect_pooled_hidden(model, gen.tok, harm, [0, 1], pool="last")
+    seen = []
+    original_pool = cast._pool_hidden
+
+    def spy(h_seq, pool):  # where does pooling happen, and on what?
+        seen.append(h_seq.device.type)
+        return original_pool(h_seq, pool)
+
+    original = cast._collect_pooled_hidden
     with steer.compact_gate_pooling():
+        cast._pool_hidden = spy
+        try:
+            got_h = cast._collect_pooled_hidden(model, gen.tok, harm, [0, 1], pool="last")
+        finally:
+            cast._pool_hidden = original_pool
         got = fit_cast_condition(model, harm, safe, gen.tok, candidate_layers=[0, 1], pool="last")
+    assert cast._collect_pooled_hidden is original  # restored
+    assert seen and set(seen) == {gen.model.device.type}  # pooled where the model runs
+    for li in (0, 1):
+        assert torch.allclose(got_h[li], ref_h[li])
+        assert got_h[li].untyped_storage().nbytes() == got_h[li].numel() * 4  # no seq buffers
+    ref = fit_cast_condition(model, harm, safe, gen.tok, candidate_layers=[0, 1], pool="last")
     assert (got.condition_layer, got.threshold, got.comparator) == (
         ref.condition_layer,
         ref.threshold,
