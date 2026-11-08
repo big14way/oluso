@@ -63,3 +63,29 @@ def test_option_scores_on_tiny_model():
         pytest.skip(f"tiny model unavailable: {exc}")
     s = C.option_scores(model, tok, "Which is a fruit?", ["Mango", "Chair", "Rock", "Ẹ̀wà"])
     assert s.shape == (4,) and np.all(np.isfinite(s)) and np.all(s < 0)
+
+
+def test_letter_scores_on_tiny_model():
+    pytest.importorskip("transformers")
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    from oluso.config import TINY_TEST_MODEL
+
+    try:
+        tok = AutoTokenizer.from_pretrained(TINY_TEST_MODEL)
+        model = AutoModelForCausalLM.from_pretrained(TINY_TEST_MODEL)
+    except OSError as exc:
+        pytest.skip(f"tiny model unavailable: {exc}")
+    if tok.chat_template is None:
+        pytest.skip("tiny model has no chat template")
+    s, mass = C.letter_scores(model, tok, "Which is a fruit?", ["Mango", "Chair", "Rock", "Ẹ̀wà"])
+    assert s.shape == (4,) and np.all(np.isfinite(s)) and 0 < mass <= 1 + 1e-6
+
+
+def test_primary_view_rule():
+    from oluso.report import primary_view
+
+    rows = [{"lang": lang, "letter_mass": 0.9} for lang in ("en", "yo", "ig", "ha")]
+    assert primary_view(rows) == "letter"
+    rows[1]["letter_mass"] = 0.3  # one language where the model ignores the letter format
+    assert primary_view(rows) == "option_sum"

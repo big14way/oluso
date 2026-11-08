@@ -3,7 +3,7 @@
 # then judge (MT -> WildGuard, AfriGuard refusal classifier, English anchors, flip test).
 # Uploads runs/p2/ to the PRIVATE scratch dataset <ns>/oluso-build under p2/<stamp>/.
 #
-#   STEPS="generate judge" (default) | "judge" with P2_FROM=p2/<stamp> to re-judge saved answers
+#   STEPS="generate judge" (default) | "judge" or "calib" with P2_FROM=p2/<stamp> to redo one part
 #   P2_LIMIT=2 for a smoke run (rows per stratum)
 #
 # HF Jobs (pin the script URL to a commit SHA; branch URLs are CDN-cached):

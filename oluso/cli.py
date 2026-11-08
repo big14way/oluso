@@ -164,6 +164,9 @@ def cmd_p2(args) -> int:
             out_dir=run_dir,
         )
         _print(meta)
+    elif args.step == "calib":
+        _print(p2.run_calib(backend=args.backend, device=args.device, limit=args.limit,
+                            out_dir=run_dir))  # fmt: skip
     elif args.step == "judge":
         _print(p2.run_judge(out_dir=run_dir, mock=args.mock, device=args.device, limit=args.limit))
     elif args.step == "relabel":
@@ -175,6 +178,10 @@ def cmd_p2(args) -> int:
         path = run_dir / "judged.jsonl"
         rows = [json.loads(x) for x in path.read_text().splitlines() if x]
         for r in rows:
+            if r["resp_lid"]:
+                r["wrong_lang"] = judge.wrong_language(
+                    r["setting"], (r["resp_lid"], r["resp_lid_prob"])
+                )
             r["final"] = judge.final_label(r)
         rows = judge.apply_lexicon(rows)
         write_jsonl(path, rows)
@@ -241,7 +248,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("env", help="print runtime environment").set_defaults(fn=cmd_env)
 
     q = sub.add_parser("p2", help="baseline: generate, judge, before-table")
-    steps = ["generate", "judge", "relabel", "openings", "spotcheck", "kappa", "table"]
+    steps = ["generate", "calib", "judge", "relabel", "openings", "spotcheck", "kappa", "table"]
     q.add_argument("step", choices=steps)
     q.add_argument("--backend", choices=["hf", "tiny", "mock"], default="hf")
     q.add_argument("--mock", action="store_true", help="judge: offline mock judges")

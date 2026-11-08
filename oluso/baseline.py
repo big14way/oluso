@@ -174,16 +174,24 @@ def afrimmlu_items(splits=("validation", "test"), langs=AFRIMMLU_LANGS) -> list[
     return items
 
 
+def _score_row(it: dict, letter, mass: float, option_sum) -> dict:
+    return {k: it[k] for k in ("id", "lang", "split", "k", "subject", "answer")} | {
+        "letter": [round(float(x), 6) for x in letter],
+        "letter_mass": round(float(mass), 6),
+        "option_sum": [round(float(x), 6) for x in option_sum],
+    }
+
+
 def score_afrimmlu(items: list[dict], gen, log: Callable | None = print) -> list[dict]:
-    """Byte-normalised option log-probs under the chat template (see oluso.calibration)."""
-    from oluso.calibration import option_scores
+    """Letter and summed-option log-probs under the chat template (see oluso.calibration)."""
+    from oluso.calibration import letter_scores, option_scores
 
     out = []
     start = time.perf_counter()
     for i, it in enumerate(items):
-        s = option_scores(gen.model, gen.tok, it["question"], it["choices"])
-        out.append({k: it[k] for k in ("id", "lang", "split", "k", "subject", "answer")}
-                   | {"scores": [round(float(x), 6) for x in s]})  # fmt: skip
+        letter, mass = letter_scores(gen.model, gen.tok, it["question"], it["choices"])
+        opt = option_scores(gen.model, gen.tok, it["question"], it["choices"])
+        out.append(_score_row(it, letter, mass, opt))
         if log and (i % 250 == 0 or i == len(items) - 1):
             log(f"  scored {i + 1}/{len(items)} in {time.perf_counter() - start:.0f}s")
     return out
@@ -198,8 +206,7 @@ def mock_afrimmlu_scores(items: list[dict], seed: int = 0) -> list[dict]:
     for it in items:
         s = rng.normal(-2.0, 0.5, 4)
         s[it["answer"]] += 0.6
-        out.append({k: it[k] for k in ("id", "lang", "split", "k", "subject", "answer")}
-                   | {"scores": [round(float(x), 6) for x in s]})  # fmt: skip
+        out.append(_score_row(it, s, float(np.exp(s).sum()), s * 3))
     return out
 
 

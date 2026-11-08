@@ -72,6 +72,28 @@ def run_generate(backend: str = "hf", device: str | None = None, batch_size: int
     return meta
 
 
+def run_calib(backend: str = "hf", device: str | None = None, limit: int | None = None,
+              out_dir: Path = P2_DIR) -> dict:  # fmt: skip
+    """AfriMMLU scoring only (letter and summed-option views); rewrites afrimmlu_scores.jsonl."""
+    from collections import defaultdict
+
+    from oluso.generate import load_generator
+
+    items = _limit(baseline.afrimmlu_items(), limit, key=lambda r: (r["lang"], r["split"]))
+    if backend == "mock":
+        scores = baseline.mock_afrimmlu_scores(items)
+    else:
+        scores = baseline.score_afrimmlu(items, load_generator(backend, device=device))
+    write_jsonl(out_dir / "afrimmlu_scores.jsonl", scores)
+    mass: dict = defaultdict(list)
+    for r in scores:
+        mass[r["lang"]].append(r["letter_mass"])
+    mean_mass = {k: round(sum(v) / len(v), 4) for k, v in mass.items()}
+    meta = {"afrimmlu_items": len(scores), "letter_mass_mean": mean_mass}
+    (out_dir / "calib_meta.json").write_text(json.dumps(meta, indent=2) + "\n")
+    return meta
+
+
 def run_judge(out_dir: Path = P2_DIR, mock: bool = False, device: str | None = None,
               limit: int | None = None) -> dict:  # fmt: skip
     from oluso.data.langid import GlotLID, MockLID
