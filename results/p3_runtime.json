@@ -1,0 +1,396 @@
+{
+  "generation_fp32_test": {
+    "base": {
+      "rows": 1600,
+      "seconds": 1773.8,
+      "new_tokens": 308405,
+      "requests_per_hour": 3247.3,
+      "new_tokens_per_s": 173.9,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 256,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L18-a1": {
+      "rows": 1600,
+      "seconds": 2018.9,
+      "new_tokens": 296374,
+      "requests_per_hour": 2853.0,
+      "new_tokens_per_s": 146.8,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 256,
+      "gpu": "NVIDIA A10G"
+    },
+    "random-L18-a1": {
+      "rows": 1600,
+      "seconds": 2029.8,
+      "new_tokens": 299255,
+      "requests_per_hour": 2837.7,
+      "new_tokens_per_s": 147.4,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 256,
+      "gpu": "NVIDIA A10G"
+    },
+    "add-L18-a1": {
+      "rows": 1600,
+      "seconds": 1783.7,
+      "new_tokens": 285482,
+      "requests_per_hour": 3229.2,
+      "new_tokens_per_s": 160.1,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 256,
+      "gpu": "NVIDIA A10G"
+    }
+  },
+  "serving_bf16_bench_dev_prompts": {
+    "base": {
+      "rows": 331,
+      "seconds": 141.8,
+      "new_tokens": 64674,
+      "requests_per_hour": 8403.4,
+      "new_tokens_per_s": 456.1,
+      "dtype": "torch.bfloat16",
+      "batch_size": 64,
+      "max_new_tokens": 256,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L18-a1": {
+      "rows": 331,
+      "seconds": 160.3,
+      "new_tokens": 63352,
+      "requests_per_hour": 7433.6,
+      "new_tokens_per_s": 395.2,
+      "dtype": "torch.bfloat16",
+      "batch_size": 64,
+      "max_new_tokens": 256,
+      "gpu": "NVIDIA A10G"
+    },
+    "peak_gpu_gb": 10.67
+  },
+  "screen_fp32_64_tokens": {
+    "base": {
+      "rows": 331,
+      "seconds": 124.6,
+      "new_tokens": 19614,
+      "requests_per_hour": 9563.4,
+      "new_tokens_per_s": 157.4,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L10-a0.5": {
+      "rows": 331,
+      "seconds": 176.9,
+      "new_tokens": 19831,
+      "requests_per_hour": 6736.0,
+      "new_tokens_per_s": 112.1,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L10-a1": {
+      "rows": 331,
+      "seconds": 175.8,
+      "new_tokens": 19978,
+      "requests_per_hour": 6778.2,
+      "new_tokens_per_s": 113.6,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L10-a1.5": {
+      "rows": 331,
+      "seconds": 175.8,
+      "new_tokens": 20185,
+      "requests_per_hour": 6778.2,
+      "new_tokens_per_s": 114.8,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L10-a2": {
+      "rows": 331,
+      "seconds": 175.8,
+      "new_tokens": 20308,
+      "requests_per_hour": 6778.2,
+      "new_tokens_per_s": 115.5,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L14-a0.5": {
+      "rows": 331,
+      "seconds": 175.8,
+      "new_tokens": 19659,
+      "requests_per_hour": 6778.2,
+      "new_tokens_per_s": 111.8,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L14-a1": {
+      "rows": 331,
+      "seconds": 175.8,
+      "new_tokens": 19479,
+      "requests_per_hour": 6778.2,
+      "new_tokens_per_s": 110.8,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L14-a1.5": {
+      "rows": 331,
+      "seconds": 175.8,
+      "new_tokens": 19188,
+      "requests_per_hour": 6778.2,
+      "new_tokens_per_s": 109.1,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L14-a2": {
+      "rows": 331,
+      "seconds": 175.8,
+      "new_tokens": 19031,
+      "requests_per_hour": 6778.2,
+      "new_tokens_per_s": 108.3,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L18-a0.5": {
+      "rows": 331,
+      "seconds": 175.8,
+      "new_tokens": 19471,
+      "requests_per_hour": 6778.2,
+      "new_tokens_per_s": 110.8,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L18-a1": {
+      "rows": 331,
+      "seconds": 175.7,
+      "new_tokens": 19785,
+      "requests_per_hour": 6782.0,
+      "new_tokens_per_s": 112.6,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L18-a1.5": {
+      "rows": 331,
+      "seconds": 175.8,
+      "new_tokens": 20290,
+      "requests_per_hour": 6778.2,
+      "new_tokens_per_s": 115.4,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L18-a2": {
+      "rows": 331,
+      "seconds": 175.8,
+      "new_tokens": 20563,
+      "requests_per_hour": 6778.2,
+      "new_tokens_per_s": 117.0,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L22-a0.5": {
+      "rows": 331,
+      "seconds": 175.8,
+      "new_tokens": 19589,
+      "requests_per_hour": 6778.2,
+      "new_tokens_per_s": 111.4,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L22-a1": {
+      "rows": 331,
+      "seconds": 175.8,
+      "new_tokens": 19549,
+      "requests_per_hour": 6778.2,
+      "new_tokens_per_s": 111.2,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L22-a1.5": {
+      "rows": 331,
+      "seconds": 175.8,
+      "new_tokens": 20000,
+      "requests_per_hour": 6778.2,
+      "new_tokens_per_s": 113.8,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    },
+    "cast-L22-a2": {
+      "rows": 331,
+      "seconds": 175.8,
+      "new_tokens": 20019,
+      "requests_per_hour": 6778.2,
+      "new_tokens_per_s": 113.9,
+      "dtype": "torch.float32",
+      "batch_size": 32,
+      "max_new_tokens": 64,
+      "gpu": "NVIDIA A10G"
+    }
+  },
+  "gate_firing_on_test": {
+    "en/benign": {
+      "fired": 41,
+      "n": 100,
+      "rate": 0.41
+    },
+    "en/culture": {
+      "fired": 63,
+      "n": 100,
+      "rate": 0.63
+    },
+    "en/harm": {
+      "fired": 90,
+      "n": 100,
+      "rate": 0.9
+    },
+    "ha/benign": {
+      "fired": 78,
+      "n": 100,
+      "rate": 0.78
+    },
+    "ha/culture": {
+      "fired": 87,
+      "n": 100,
+      "rate": 0.87
+    },
+    "ha/harm": {
+      "fired": 94,
+      "n": 100,
+      "rate": 0.94
+    },
+    "ig/benign": {
+      "fired": 96,
+      "n": 100,
+      "rate": 0.96
+    },
+    "ig/culture": {
+      "fired": 93,
+      "n": 100,
+      "rate": 0.93
+    },
+    "ig/harm": {
+      "fired": 97,
+      "n": 100,
+      "rate": 0.97
+    },
+    "pcm-en/benign": {
+      "fired": 46,
+      "n": 100,
+      "rate": 0.46
+    },
+    "pcm-en/harm": {
+      "fired": 87,
+      "n": 100,
+      "rate": 0.87
+    },
+    "pcm/benign": {
+      "fired": 64,
+      "n": 100,
+      "rate": 0.64
+    },
+    "pcm/harm": {
+      "fired": 89,
+      "n": 100,
+      "rate": 0.89
+    },
+    "yo/benign": {
+      "fired": 96,
+      "n": 100,
+      "rate": 0.96
+    },
+    "yo/culture": {
+      "fired": 83,
+      "n": 100,
+      "rate": 0.83
+    },
+    "yo/harm": {
+      "fired": 98,
+      "n": 100,
+      "rate": 0.98
+    }
+  },
+  "gate_firing_on_afrimmlu": "none of 2,332 prompts: CAST and random-direction letter scores are bit-identical to base on every item, while ungated addition changes all 2,332",
+  "tokens_per_request_test": {
+    "en": {
+      "n": 300,
+      "prompt_aya": 16.1,
+      "prompt_o200k": 15.8,
+      "resp_aya": 155.0,
+      "resp_o200k": 154.1,
+      "new_tokens": 156.3
+    },
+    "yo": {
+      "n": 300,
+      "prompt_aya": 50.2,
+      "prompt_o200k": 49.5,
+      "resp_aya": 217.4,
+      "resp_o200k": 210.1,
+      "new_tokens": 217.8
+    },
+    "ig": {
+      "n": 300,
+      "prompt_aya": 34.8,
+      "prompt_o200k": 32.6,
+      "resp_aya": 201,
+      "resp_o200k": 190.2,
+      "new_tokens": 201.7
+    },
+    "ha": {
+      "n": 300,
+      "prompt_aya": 36.8,
+      "prompt_o200k": 30.9,
+      "resp_aya": 190.7,
+      "resp_o200k": 167.1,
+      "new_tokens": 191.4
+    },
+    "pcm": {
+      "n": 200,
+      "prompt_aya": 17.5,
+      "prompt_o200k": 18.1,
+      "resp_aya": 205.1,
+      "resp_o200k": 203.8,
+      "new_tokens": 206.1
+    },
+    "pcm-en": {
+      "n": 200,
+      "prompt_aya": 18.1,
+      "prompt_o200k": 18.5,
+      "resp_aya": 184.0,
+      "resp_o200k": 182.9,
+      "new_tokens": 185.2
+    }
+  },
+  "notes": "HF transformers, greedy, max_new_tokens 256, one NVIDIA A10G (a10g-small). fp32 batch 32 is the evaluation setting (batch-invariant); bf16 batch 64 prices serving. Token counts: Tiny Aya tokenizer vs OpenAI o200k_base, prompts without the chat template."
+}

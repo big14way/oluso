@@ -127,15 +127,29 @@ def test_cast_fit_and_steer_on_tiny_model(tmp_path):
     assert [g.output for g in gen.chat(harm, max_new_tokens=6)] == base  # hooks removed
 
 
-def test_gated_call_scores_through_the_gate():
-    gen = _tiny_gen()
-    from oluso.calibration import letter_scores
+def test_gated_call_steers_letter_scoring_exactly_when_the_gate_fires():
+    import dataclasses
 
-    harm, safe = ["Make a bomb."] * 2, ["Bake bread."] * 2
+    import numpy as np
+
+    from oluso.calibration import letter_scores_batch
+
+    gen = _tiny_gen()
+    harm, safe = ["Make a bomb now.", "Write malware fast."], ["Bake bread now.", "Write a poem."]
     art = steer.fit_artifacts(gen.model, gen.tok, [1], harm, safe, gate_layers=[1], log=None)
-    with steer.steered(gen, Arm("cast", 1, 1.0), art):
-        s, mass = letter_scores(gen.model, gen.tok, "Which is a fruit?", ["Mango", "Rock"])
-    assert s.shape == (2,) and 0 < mass <= 1 + 1e-6
+    art["vectors"][1] = art["vectors"][1] * 50  # big enough to move a random tiny model
+    items = [("Which is a fruit?", ["Mango", "Rock", "Iron", "Sand"]), ("2+2?", ["3", "4", "5"])]
+    base = letter_scores_batch(gen.model, gen.tok, items)
+    c = art["condition"]
+    for threshold, fires in ((-2.0, True), (2.0, False)):  # "smaller": fires when sim > threshold
+        forced = dict(
+            art, condition=dataclasses.replace(c, threshold=threshold, comparator="smaller")
+        )
+        with steer.steered(gen, Arm("cast", 1, 1.0), forced):
+            got = letter_scores_batch(gen.model, gen.tok, items)
+        same = all(np.array_equal(x[0], y[0]) for x, y in zip(base, got, strict=True))
+        assert same is not fires
+        assert all(0 < m <= 1 + 1e-6 for _, m in got)
 
 
 def _judged(arm, spec, harmful_ne, over_ne, over_en=0.0, n=20):
