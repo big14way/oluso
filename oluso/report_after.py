@@ -101,7 +101,14 @@ def compare(rows: list[dict], arm: str, ref: str = "base", key: str = "final") -
 
 
 def calibration_arm(scores: list[dict], view: str) -> dict:
+    """Per language: raw, cross-fitted T, T fitted on that language's validation split, and
+    one global T fitted on all languages' validation items (is per-language T needed?)."""
     out = {}
+    val_all = [r for r in scores if r["split"] == "validation"]
+    t_global = None
+    if val_all:
+        t_global, _ = C.fit_temperature(np.array([r[view] for r in val_all]),
+                                        np.array([r["answer"] for r in val_all]))  # fmt: skip
     for lang in CALIB_LANGS:
         test = [r for r in scores if r["lang"] == lang and r["split"] == "test"]
         val = [r for r in scores if r["lang"] == lang and r["split"] == "validation"]
@@ -115,7 +122,9 @@ def calibration_arm(scores: list[dict], view: str) -> dict:
         if val:
             sv, yv = np.array([r[view] for r in val]), np.array([r["answer"] for r in val])
             t_val, _ = C.fit_temperature(sv, yv)
-            block |= {"val_T": t_val, "val_fit": C.summarize_probs(C.softmax(s, t_val), y)}
+            block |= {"val_T": t_val, "val_fit": C.summarize_probs(C.softmax(s, t_val), y),
+                      "global_T": t_global,
+                      "global_fit": C.summarize_probs(C.softmax(s, t_global), y)}  # fmt: skip
         out[lang] = block
     return out
 
@@ -213,8 +222,8 @@ def markdown(res: dict) -> str:
     view = res["calibration_view"]
     lines += ["", f"## Calibration (AfriMMLU test, {VIEW_NAMES[view]}): raw → per-language "
               "temperature", "", "| Arm | Lang | Accuracy | ECE raw | ECE T (cross-fit) "
-              "| ECE T (val-fit) | T (val) | Noise floor | NLL raw → T |",
-              "|---|---|---:|---:|---:|---:|---:|---:|---|"]  # fmt: skip
+              "| ECE T (val-fit) | T (val) | ECE global T | Noise floor | NLL raw → T |",
+              "|---|---|---:|---:|---:|---:|---:|---:|---:|---|"]  # fmt: skip
     for a, langs in res["calibration"].items():
         for lang, c in langs.items():
             r, cf = c["raw"], c["crossfit"]
@@ -222,7 +231,9 @@ def markdown(res: dict) -> str:
             lines.append(
                 f"| {a} | {lang} | {100 * r['accuracy']:.1f} | {r['ece15']:.3f} "
                 f"| {cf['ece15']:.3f} | {vf.get('ece15', float('nan')):.3f} "
-                f"| {c.get('val_T', float('nan')):.2f} | {r['ece15_noise_floor']:.3f} "
+                f"| {c.get('val_T', float('nan')):.2f} "
+                f"| {c.get('global_fit', {}).get('ece15', float('nan')):.3f} "
+                f"| {r['ece15_noise_floor']:.3f} "
                 f"| {r['nll']:.3f} → {cf['nll']:.3f} |"
             )
     return "\n".join(lines) + "\n"
