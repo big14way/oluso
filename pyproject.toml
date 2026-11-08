@@ -44,7 +44,7 @@ packages = ["oluso"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-extend-exclude = ["notebooks"]
+extend-exclude = ["notebooks", "cards"]  # cards are published dataset READMEs, kept byte-identical
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
