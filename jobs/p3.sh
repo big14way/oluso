@@ -30,13 +30,19 @@ DEST="p3/$STAMP${P3_LIMIT:+-smoke}"
 mkdir -p runs/p3
 upload() { uv run hf upload "$NS/oluso-build" runs/p3 "$DEST" --repo-type dataset --private; }
 trap 'echo "step failed; uploading partial results"; upload || true' ERR
+# Our own log, uploaded every 5 minutes: the Jobs log endpoint has returned nothing for some runs.
+exec > >(tee -a runs/p3/job.log) 2>&1
+upload_log() { uv run hf upload "$NS/oluso-build" runs/p3/job.log "$DEST/job.log" --repo-type dataset --private >/dev/null 2>&1; }
+( while sleep 300; do upload_log || true; done ) &
+echo "start $(date -u +%FT%TZ) ref=$REF steps=[$STEPS] limit=${P3_LIMIT:-none}"
+nvidia-smi --query-gpu=name,memory.total --format=csv,noheader || true
 
 if [[ -n "${P3_FROM:-}" ]]; then
   uv run hf download "$NS/oluso-build" --repo-type dataset --include "$P3_FROM/*" --local-dir /tmp/p3from
   cp /tmp/p3from/"$P3_FROM"/* runs/p3/
 fi
 for step in $STEPS; do
-  echo "=== p3 $step ==="
+  echo "=== p3 $step $(date -u +%T) ==="
   case "$step" in
     judge-*|select) uv run oluso p3 "$step" ;;
     *) uv run oluso p3 "$step" $LIMIT_ARG ;;
