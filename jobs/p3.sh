@@ -4,6 +4,7 @@
 #
 #   STEPS="fit screen dev judge-dev select" (default): fit CAST, screen, judge finalists, select
 #   STEPS="test judge-test calib" with P3_FROM=p3/<stamp>: the locked test set, once
+#   STEPS="gate-test" after select: gate firing rates on the test set (explains, chooses nothing)
 #   STEPS="bench" after select: bf16 serving throughput (ROI); every generation step also
 #   writes <step>_timing.json with per-arm requests/hour and new tokens/s
 #   P3_LIMIT=2 for a smoke run (rows per stratum); P3_ARMS=base,cast to run only some test arms

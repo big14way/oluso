@@ -243,6 +243,8 @@ def cmd_p3(args) -> int:
         _print(res)
     elif args.step == "calib":
         _print(p3.run_calib(**gpu, limit=args.limit, kinds=args.arms))
+    elif args.step.startswith("gate-"):
+        _print(p3.run_gate(args.step.removeprefix("gate-"), **gpu, limit=args.limit))
     elif args.step == "bench":
         _print(p3.run_bench(**gpu, dtype=args.dtype, batch_size=64, limit=args.limit))
     elif args.step == "table":
@@ -305,6 +307,8 @@ def main(argv: list[str] | None = None) -> int:
         "judge-test",
         "calib",
         "bench",
+        "gate-dev",
+        "gate-test",
         "table",
     ]
     q.add_argument("step", choices=steps)

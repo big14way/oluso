@@ -210,6 +210,15 @@ def run_calib(backend="hf", device=None, out_dir: Path = P3_DIR, limit=None,
     return {"arms": [a.name for a in arms], "rows": len(out)}
 
 
+def run_gate(stage: str, backend="hf", device=None, out_dir: Path = P3_DIR, limit=None) -> dict:
+    """How often the fitted gate fires on each (setting, label) group of a split. On test
+    this is measured after selection; it explains the after-table, it chooses nothing."""
+    gen, art = _load(backend, device, out_dir)
+    rep = {} if art is None else steer.gate_report(gen, art, split_rows(stage, limit))
+    (out_dir / f"gate_{stage}.json").write_text(json.dumps(rep, indent=2) + "\n")
+    return rep
+
+
 def run_bench(backend="hf", device=None, out_dir: Path = P3_DIR, dtype="bfloat16",
               batch_size=64, limit=None) -> dict:  # fmt: skip
     """Throughput for the ROI section: base and the selected CAST arm on the dev prompts,

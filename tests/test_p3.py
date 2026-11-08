@@ -209,6 +209,8 @@ def test_mock_chain_end_to_end(tmp_path):
     assert set(json.loads((tmp_path / "test_timing_random-add.json").read_text())) == set(
         info["arms"][2:]
     )
+    assert p3.run_gate("test", **kw, limit=1) == {}  # mock backend: no gate
+    assert (tmp_path / "gate_test.json").exists()
     bench = p3.run_bench(**kw, dtype="float32", limit=1)
     assert set(bench) >= {"base", info["arms"][1]}
     assert (tmp_path / "bench_float32_timing.json").exists()
