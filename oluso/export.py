@@ -92,5 +92,8 @@ def run(p2_dir: Path, p3_dir: Path, apply: bool = False,
         ns = json.loads((config.ROOT / "records" / "hub.json").read_text())["namespace"]
         card = (config.ROOT / "cards" / f"{repo}.md").read_text(encoding="utf-8")
         info["url"] = push(configs, f"{ns}/{repo}", card)
+        from oluso.hub import add_to_collection
+
+        info["collection"] = add_to_collection(f"{ns}/{repo}", "dataset", "datasets")
         info["applied"] = True
     return info

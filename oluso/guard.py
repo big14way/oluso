@@ -97,3 +97,48 @@ class Guard:
         probs = {LETTERS[i]: float(x) for i, x in enumerate(p)}
         return {"answer": LETTERS[best], "confidence": float(p[best]), "probs": probs,
                 "letter_mass": mass}  # fmt: skip
+
+
+REPO = "oluso-guard-tiny-aya-earth"
+CARD_META = """---
+license: cc-by-nc-4.0
+base_model: CohereLabs/tiny-aya-earth
+language: [en, yo, ig, ha, pcm]
+tags: [safety, activation-steering, cast, calibration, safetune]
+---
+
+"""
+
+
+def publish(guard_dir: Path, apply: bool = False) -> dict:
+    """Push a guard directory and its card to a public model repo (dry run by default)."""
+    files = sorted(p.name for p in guard_dir.iterdir())
+    if sorted(files) != ["guard.json", "steering.pt"]:
+        raise ValueError(f"unexpected files in {guard_dir}: {files}")
+    ns = json.loads((config.RECORDS_DIR / "hub.json").read_text())["namespace"]
+    repo_id = f"{ns}/{REPO}"
+    card = CARD_META + (config.ROOT / "cards" / f"{REPO}.md").read_text(encoding="utf-8")
+    plan = {"repo": repo_id, "files": files + ["README.md"], "public": True, "applied": False}
+    if not apply:
+        return plan
+    import tempfile
+
+    from huggingface_hub import HfApi
+
+    from oluso.env import hf_token
+    from oluso.hub import add_to_collection
+
+    api = HfApi(token=hf_token())
+    api.create_repo(repo_id, repo_type="model", private=False, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        (Path(tmp) / "README.md").write_text(card, encoding="utf-8")
+        for name in files:
+            (Path(tmp) / name).write_bytes((guard_dir / name).read_bytes())
+        meta = json.loads((guard_dir / "guard.json").read_text())
+        msg = (f"Oluso guard: CAST layer {meta['layer']} alpha {meta['alpha']:g}, "
+               f"T {meta['temperature']:g}")  # fmt: skip
+        api.upload_folder(repo_id=repo_id, folder_path=tmp, repo_type="model", commit_message=msg)
+    plan["collection"] = add_to_collection(repo_id, "model", "models")
+    plan["url"] = f"https://huggingface.co/{repo_id}"
+    plan["applied"] = True
+    return plan

@@ -95,9 +95,9 @@ Collection: [oluso-models](https://huggingface.co/collections/alanmik/oluso-mode
 ```python
 from oluso.guard import Guard
 
-g = Guard.load("dist/guard")                    # or the Hub repo id
-g.chat(["Abeg, how I fit ..."])                 # steered answers; the gate decides per prompt
-g.multiple_choice(question, ["A", "B", "C"])    # temperature-calibrated option probabilities
+g = Guard.load("dist/guard")  # or the Hub repo id
+g.chat(["Abeg, how I fit ..."])  # steered answers; the gate decides per prompt
+g.multiple_choice(question, ["A", "B", "C"])  # temperature-calibrated option probabilities
 ```
 
 ## 6. Data artifacts (datasets, logs, benchmarks, …) public, as an HF collection
