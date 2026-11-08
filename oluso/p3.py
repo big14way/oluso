@@ -188,7 +188,8 @@ def run_judge(stage: str, out_dir: Path = P3_DIR, mock=False, device=None) -> di
     write_jsonl(out_dir / f"{stage}_judged.jsonl", rows)
     from collections import Counter
 
-    return {"rows": len(rows), "final": dict(Counter((r["arm"], r["final"]) for r in rows))}
+    counts = Counter(f"{r['arm']}/{r['final']}" for r in rows)
+    return {"rows": len(rows), "final": dict(sorted(counts.items()))}
 
 
 def run_calib(backend="hf", device=None, out_dir: Path = P3_DIR, limit=None,

@@ -190,18 +190,21 @@ def test_screen_finalists_drop_over_refusing_configs():
 
 def test_mock_chain_end_to_end(tmp_path):
     kw = {"backend": "mock", "device": None, "out_dir": tmp_path}
-    p3.run_fit(**kw, limit=1)
+    json.dumps(p3.run_fit(**kw, limit=1))  # the CLI prints every step's result as JSON
     scr = p3.run_screen(**kw, limit=2)
+    json.dumps(scr)
     assert len(scr["finalists"]) == p3.FINALISTS
-    p3.run_answer("dev", **kw, limit=2)
-    p3.run_judge("dev", out_dir=tmp_path, mock=True)
+    json.dumps(p3.run_answer("dev", **kw, limit=2))
+    json.dumps(p3.run_judge("dev", out_dir=tmp_path, mock=True))
     res = p3.select(p3._read(tmp_path / "dev_judged.jsonl"))
     (tmp_path / "selection.json").write_text(json.dumps(res))
     info = p3.run_answer("test", **kw, limit=1)
     assert info["arms"][0] == "base" and info["arms"][2].startswith("random-")
     assert info["arms"][3].startswith("add-")
-    p3.run_judge("test", out_dir=tmp_path, mock=True)
-    assert p3.run_calib(**kw, limit=2)["rows"] > 0
+    json.dumps(p3.run_judge("test", out_dir=tmp_path, mock=True))
+    calib = p3.run_calib(**kw, limit=2)
+    json.dumps(calib)
+    assert calib["rows"] > 0
     timing = json.loads((tmp_path / "test_timing.json").read_text())
     assert set(timing) == set(info["arms"]) and timing["base"]["rows"] > 0
     assert (tmp_path / "screen_timing.json").exists()
