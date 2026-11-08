@@ -256,6 +256,15 @@ def cmd_p3(args) -> int:
     return 0
 
 
+def cmd_export(args) -> int:
+    from pathlib import Path
+
+    from oluso import export
+
+    _print(export.run(Path(args.p2_dir), Path(args.p3_dir), apply=args.apply))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="oluso")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -323,6 +332,12 @@ def main(argv: list[str] | None = None) -> int:
     q.add_argument("--out-dir", default=None, help="table: where to write (default results/)")
     q.add_argument("--dtype", default="bfloat16", help="bench: serving dtype to time")
     q.set_defaults(fn=cmd_p3)
+
+    x = sub.add_parser("export", help="label-only results dataset (dry run by default)")
+    x.add_argument("--p2-dir", default="runs/p2")
+    x.add_argument("--p3-dir", default="runs/p3")
+    x.add_argument("--apply", action="store_true", help="push it public to the Hub")
+    x.set_defaults(fn=cmd_export)
 
     s = sub.add_parser("smoke", help="P0 gate: generate Yoruba with the target model")
     s.add_argument("--backend", choices=["hf", "tiny", "mock"], default="hf")
