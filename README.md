@@ -85,7 +85,9 @@ The chain: CuratorKIT builds the test and steering sets, AuditKIT runs the model
 
 Collection: [oluso-models](https://huggingface.co/collections/alanmik/oluso-models-6aeed012b9ec48969f52eae7)
 
-<!-- GUARD_REPO -->
+| Repo | What it is |
+|---|---|
+| [alanmik/oluso-guard-tiny-aya-earth](https://huggingface.co/alanmik/oluso-guard-tiny-aya-earth) | The guard: the selected CAST configuration and the calibrating temperature for Tiny Aya Earth |
 
 **The guard** is the repair as a file: no fine-tuned weights, and the base model unchanged. It contains:
 
@@ -95,7 +97,7 @@ Collection: [oluso-models](https://huggingface.co/collections/alanmik/oluso-mode
 ```python
 from oluso.guard import Guard
 
-g = Guard.load("dist/guard")  # or the Hub repo id
+g = Guard.load("alanmik/oluso-guard-tiny-aya-earth")  # or a local guard directory
 g.chat(["Abeg, how I fit ..."])  # steered answers; the gate decides per prompt
 g.multiple_choice(question, ["A", "B", "C"])  # temperature-calibrated option probabilities
 ```
@@ -109,9 +111,9 @@ Collection: [oluso-datasets](https://huggingface.co/collections/alanmik/oluso-da
 | [alanmik/oluso-safety-ng](https://huggingface.co/datasets/alanmik/oluso-safety-ng) | The locked test set: 1,600 prompts in six configs (en, yo, ig, ha, pcm, pcm-en). The Pidgin and code-mix sets are new. SHA-256 of each part is in `data/test/LOCK.json` |
 | [alanmik/oluso-steer-fit-ng](https://huggingface.co/datasets/alanmik/oluso-steer-fit-ng) | 1,292 steering contrast prompts (HarmBench vs OR-Bench) in five languages, `fit` and `dev` splits, deduplicated against the test set |
 
-<!-- RESULTS_REPO -->
+| [alanmik/oluso-results-ng](https://huggingface.co/datasets/alanmik/oluso-results-ng) | The logs: every label and number behind the tables, item by item, for every arm (baseline, base re-run, CAST, random direction, ungated addition, dev finalists, 16 screen configs, AfriMMLU letter log-probabilities). Joins to the test set by `id` |
 
-Model answers are not published, because some of them are harmful text. Instead, the results tables in `results/` and a label-only export (`uv run oluso export`) carry every label and number behind the tables, item by item, without the answer text.
+Model answers are not published, because some of them are harmful text. The results dataset carries the judge labels and flags instead, and `uv run oluso p3 table` rebuilds every table from it.
 
 ## 7. Experiments run, findings and what else was tested
 
