@@ -257,6 +257,18 @@ def test_after_table_on_mock_runs(tmp_path):
     assert set(res["calibration"]) == {"base", "cast-L14-a1", "random-L14-a1", "add-L14-a1"}
     assert res["base_reproducibility_vs_p2"]["identical_answer"] == 1.0  # mock is deterministic
 
+    # The published label-only export rebuilds the same tables (answer identity aside).
+    from oluso import export
+
+    rebuilt = report_after.from_rows(export.build(p2_dir, p3_dir), sel, tmp_path / "rebuilt")
+    a, b = (
+        json.loads(json.dumps(res, default=float)),
+        json.loads(json.dumps(rebuilt, default=float)),
+    )
+    assert b["base_reproducibility_vs_p2"]["identical_answer"] is None
+    a["base_reproducibility_vs_p2"]["identical_answer"] = None
+    assert a == b
+
 
 def test_paired_stats():
     from oluso.stats import holm, mcnemar_exact, paired_cluster_delta

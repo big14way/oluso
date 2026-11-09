@@ -250,8 +250,13 @@ def cmd_p3(args) -> int:
     elif args.step == "table":
         from oluso import report_after
 
-        out = Path(args.out_dir) if args.out_dir else None
-        res = report_after.after_table(Path(args.p2_dir), run_dir, out)
+        if args.from_hub:  # rebuild from the public label-only results; results/ is untouched
+            import tempfile
+
+            res = report_after.from_hub(Path(tempfile.mkdtemp(prefix="oluso-tables-")))
+        else:
+            out = Path(args.out_dir) if args.out_dir else None
+            res = report_after.after_table(Path(args.p2_dir), run_dir, out)
         print(report_after.markdown(res))
     return 0
 
@@ -352,6 +357,8 @@ def main(argv: list[str] | None = None) -> int:
     q.add_argument("--arms", default=None, help="test/calib: comma list of arm kinds to run")
     q.add_argument("--out-dir", default=None, help="table: where to write (default results/)")
     q.add_argument("--dtype", default="bfloat16", help="bench: serving dtype to time")
+    q.add_argument("--from-hub", action="store_true",
+                   help="table: rebuild from the public results dataset")  # fmt: skip
     q.set_defaults(fn=cmd_p3)
 
     g = sub.add_parser("guard", help="export the guard locally, or publish it (dry run by default)")

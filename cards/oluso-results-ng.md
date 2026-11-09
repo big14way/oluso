@@ -31,7 +31,7 @@ Every label and number behind the Oluso tables, item by item: the base model and
 
 ## Reproducing the tables
 
-`uv run oluso p3 table` in [github.com/big14way/oluso](https://github.com/big14way/oluso) computes the published tables from these rows: Wilson intervals, cluster bootstrap, exact McNemar with Holm, and temperature fits.
+`uv run oluso p3 table --from-hub` in [github.com/big14way/oluso](https://github.com/big14way/oluso) downloads these rows and recomputes every published table: Wilson intervals, cluster bootstrap, exact McNemar with Holm, and temperature fits. Every number matches the repository's `results/p3_after.json`. The one exception is the check that the base re-run reproduced the baseline answers word for word, which needs the unpublished answers.
 
 ## License
 

@@ -113,7 +113,7 @@ Collection: [oluso-datasets](https://huggingface.co/collections/alanmik/oluso-da
 
 | [alanmik/oluso-results-ng](https://huggingface.co/datasets/alanmik/oluso-results-ng) | The logs: every label and number behind the tables, item by item, for every arm (baseline, base re-run, CAST, random direction, ungated addition, dev finalists, 16 screen configs, AfriMMLU letter log-probabilities). Joins to the test set by `id` |
 
-Model answers are not published, because some of them are harmful text. The results dataset carries the judge labels and flags instead, and `uv run oluso p3 table` rebuilds every table from it.
+Model answers are not published, because some of them are harmful text. The results dataset carries the judge labels and flags instead. `uv run oluso p3 table --from-hub` rebuilds every table from it and matches `results/p3_after.json` exactly; only the answer-identity check needs the unpublished answers.
 
 ## 7. Experiments run, findings and what else was tested
 
