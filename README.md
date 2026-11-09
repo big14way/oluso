@@ -373,8 +373,9 @@ Requires Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync --extra data
-make check                      # lint + 68 tests; no credentials, no GPU (tiny random model)
-uv run oluso data verify        # the locked test set matches its hashes
+make check                        # lint + tests; no credentials, no GPU (tiny random model)
+uv run oluso data verify          # the locked test set matches its hashes
+uv run oluso p3 table --from-hub  # every after-table number, from the public results; no GPU, no token
 ```
 
 Everything has a credential-free mode (`--backend mock` or `--backend tiny`). The real runs need the Tiny Aya Earth licence accepted and `HF_TOKEN` in `.env`. They ran as Hugging Face Jobs on one A10G (`jobs/p2.sh`, `jobs/p3.sh`), each script pinned to a commit and uploading its outputs after every step:
@@ -388,7 +389,7 @@ Everything has a credential-free mode (`--backend mock` or `--backend tiny`). Th
 | Test set, four arms (two jobs in parallel) | `oluso p3 test`, `judge-test`, `calib` with `--arms` | 64 + 26 + 24 min each |
 | After-table | `oluso p3 table` | CPU, 1 min |
 
-The selection record and all result tables are in `results/`. Total GPU spend for the whole project, including failed runs: $14.15 of Hugging Face Jobs time (14 h 22 min).
+The selection record and all result tables are in `results/`. Publishing commands are dry runs unless given `--apply`: `oluso export` (results dataset), `oluso guard export|publish` (the guard), `oluso demo build|publish` (the results page). Total GPU spend for the whole project, including failed runs: $14.15 of Hugging Face Jobs time (14 h 22 min).
 
 ## License
 
