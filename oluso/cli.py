@@ -282,6 +282,16 @@ def cmd_guard(args) -> int:
     return 0
 
 
+def cmd_demo(args) -> int:
+    from pathlib import Path
+
+    from oluso import demo
+
+    out = Path(args.out_dir)
+    _print(demo.write(out) if args.step == "build" else demo.publish(out, apply=args.apply))
+    return 0
+
+
 def cmd_export(args) -> int:
     from pathlib import Path
 
@@ -368,6 +378,12 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("--temperature", type=float, default=None, help="export: default global T")
     g.add_argument("--apply", action="store_true", help="publish: push it public to the Hub")
     g.set_defaults(fn=cmd_guard)
+
+    m = sub.add_parser("demo", help="build the static results page, or publish it as a Space")
+    m.add_argument("step", choices=["build", "publish"])
+    m.add_argument("--out-dir", default="dist/space")
+    m.add_argument("--apply", action="store_true", help="publish: create the public Space")
+    m.set_defaults(fn=cmd_demo)
 
     x = sub.add_parser("export", help="label-only results dataset (dry run by default)")
     x.add_argument("--p2-dir", default="runs/p2")

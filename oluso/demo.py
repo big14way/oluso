@@ -184,7 +184,7 @@ colorTo: blue
 sdk: static
 pinned: false
 license: cc-by-nc-4.0
-short_description: Safety and calibration drift of Tiny Aya Earth in Nigerian languages
+short_description: Tiny Aya safety and calibration drift, Nigerian languages
 ---
 
 Static results page for [Oluso](https://github.com/big14way/oluso): no model runs here.
@@ -212,3 +212,42 @@ def write(out_dir: Path, data: dict | None = None) -> dict:
         "bytes": len(doc),
         "examples": len(data["examples"]),
     }
+
+
+SPACE = "oluso"
+
+
+def publish(out_dir: Path, apply: bool = False) -> dict:
+    """Push the built page to a public static Space and add it to the models collection."""
+    files = sorted(p.name for p in out_dir.iterdir())
+    if not {"index.html", "README.md"} <= set(files):
+        raise ValueError(f"build the page first (oluso demo build): {out_dir} has {files}")
+    ns = json.loads((config.RECORDS_DIR / "hub.json").read_text())["namespace"]
+    repo_id = f"{ns}/{SPACE}"
+    plan = {
+        "space": repo_id,
+        "files": ["index.html", "README.md"],
+        "public": True,
+        "applied": False,
+    }
+    if not apply:
+        return plan
+    from huggingface_hub import HfApi
+
+    from oluso.env import hf_token
+    from oluso.hub import add_to_collection
+
+    api = HfApi(token=hf_token())
+    api.create_repo(repo_id, repo_type="space", space_sdk="static", private=False, exist_ok=True)
+    api.upload_folder(
+        repo_id=repo_id,
+        folder_path=out_dir,
+        repo_type="space",
+        allow_patterns=["index.html", "README.md"],
+        delete_patterns=["style.css"],  # the static template's unused stylesheet
+        commit_message="Oluso results page",
+    )
+    plan["collection"] = add_to_collection(repo_id, "space", "models", note="Results page")
+    plan["url"] = f"https://huggingface.co/spaces/{repo_id}"
+    plan["applied"] = True
+    return plan

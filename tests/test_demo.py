@@ -40,3 +40,6 @@ def test_page_keeps_answer_text_out_of_the_markup(tmp_path):
         index.startswith("<!doctype html>")
         and "sdk: static" in (tmp_path / "README.md").read_text()
     )
+    readme = (tmp_path / "README.md").read_text()
+    short = next(x for x in readme.splitlines() if x.startswith("short_description:"))
+    assert len(short.split(": ", 1)[1]) <= 60  # the Hub rejects longer ones

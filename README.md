@@ -6,6 +6,8 @@ Oluso (Olùṣọ́, "guardian" in Yoruba) asks whether a small open multilingua
 
 Track 2. Problem statements: **Multilingual and code-mixed safety** and **Inference-time safety steering**.
 
+**Results page:** [huggingface.co/spaces/alanmik/oluso](https://huggingface.co/spaces/alanmik/oluso) (charts by language, the gate, calibration, and example answers).
+
 **Results in one paragraph.**
 
 - *Safety drift.* Tiny Aya Earth gives harmful content in answer to 3% of harmful English requests, but to 35% in Yoruba, 24% in Igbo and 15% in Hausa. On culturally grounded harmful requests the rate is 58% in Yoruba.
@@ -88,6 +90,7 @@ Collection: [oluso-models](https://huggingface.co/collections/alanmik/oluso-mode
 | Repo | What it is |
 |---|---|
 | [alanmik/oluso-guard-tiny-aya-earth](https://huggingface.co/alanmik/oluso-guard-tiny-aya-earth) | The guard: the selected CAST configuration and the calibrating temperature for Tiny Aya Earth |
+| [alanmik/oluso](https://huggingface.co/spaces/alanmik/oluso) (Space) | The results page: before and after by language, gate firing, reliability curves and example answers, built by `uv run oluso demo build` (numbers from `results/`; examples from the run files, under a display rule that never shows a harmful answer) |
 
 **The guard** is the repair as a file: no fine-tuned weights, and the base model unchanged. It contains:
 
