@@ -1,0 +1,336 @@
+<title>Oluso</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Safety and calibration drift of Tiny Aya Earth in Yoruba, Igbo, Hausa and Nigerian Pidgin, before and after an inference-time repair.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: an indigo header band like a length of adire cloth, then one reading column of
+   figures, each answering one question in order: what drifts, what the repair does, why it
+   costs, what calibration needs, what the answers look like. */
+:root {
+  --ground: #f6f7fb;       /* cool undyed cotton */
+  --surface: #ffffff;
+  --ink: #141a3a;          /* deep indigo-black text */
+  --muted: #565d7d;        /* indigo-biased grey */
+  --rule: #dde1ee;
+  --indigo: #2b3a99;       /* adire indigo: the repair, refusals */
+  --wash: #e3e7f7;         /* pale indigo wash */
+  --madder: #b0362a;       /* harmful answers */
+  --kola: #a3660f;         /* over-refusal */
+  --band: #1b2363;         /* header cloth */
+  --band-ink: #eef0fb;
+  --band-dot: rgba(255, 255, 255, 0.10);
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0e1124; --surface: #151a33; --ink: #e9ebf7; --muted: #a2a8c6; --rule: #2a3156;
+    --indigo: #93a3f5; --wash: #232b57; --madder: #ef8171; --kola: #e2a648;
+    --band: #0a0d22; --band-ink: #e9ebf7; --band-dot: rgba(147, 163, 245, 0.12);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0e1124; --surface: #151a33; --ink: #e9ebf7; --muted: #a2a8c6; --rule: #2a3156;
+  --indigo: #93a3f5; --wash: #232b57; --madder: #ef8171; --kola: #e2a648;
+  --band: #0a0d22; --band-ink: #e9ebf7; --band-dot: rgba(147, 163, 245, 0.12);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); font: 16px/1.55 var(--body); }
+a { color: var(--indigo); }
+a:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--indigo); outline-offset: 2px; }
+.wrap { max-width: 980px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+header.cloth { background-color: var(--band); color: var(--band-ink);
+  background-image: radial-gradient(var(--band-dot) 1.6px, transparent 1.8px), radial-gradient(var(--band-dot) 1.6px, transparent 1.8px);
+  background-size: 22px 22px; background-position: 0 0, 11px 11px; }
+header.cloth .wrap { padding-block: 44px 36px; display: grid; gap: 18px; }
+.eyebrow { font: 500 12px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
+h1 { font: 700 clamp(40px, 7vw, 64px)/1 var(--display); margin: 0; letter-spacing: -0.01em; }
+.thesis { font-size: 18px; max-width: 62ch; margin: 0; text-wrap: pretty; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 8px; }
+.tile { border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 6px; padding: 14px 16px; display: grid; gap: 4px; }
+.tile b { font: 700 30px/1.05 var(--display); font-variant-numeric: tabular-nums; }
+.tile span { font-size: 14px; opacity: 0.88; }
+.links { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; }
+.links a { color: var(--band-ink); }
+
+main .wrap { padding-block: 8px 56px; display: grid; gap: 52px; }
+section { display: grid; gap: 14px; min-width: 0; }
+h2 { font: 700 26px/1.15 var(--display); margin: 0; text-wrap: balance; }
+.lede { margin: 0; max-width: 68ch; color: var(--ink); }
+.note { margin: 0; color: var(--muted); font-size: 14px; max-width: 72ch; }
+.figure { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.controls .lab { font-size: 13px; color: var(--muted); }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.seg button { font: 500 13px/1 var(--body); padding: 9px 12px; background: transparent; color: var(--ink); border: 0; border-right: 1px solid var(--rule); cursor: pointer; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--indigo); color: var(--surface); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); }
+.key { display: inline-flex; align-items: center; gap: 7px; }
+.swatch { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.chart { overflow-x: auto; }
+.chart svg { display: block; width: 100%; height: auto; min-width: 560px; }
+svg text { font-family: var(--body); fill: var(--muted); }
+svg .lbl { fill: var(--ink); font-size: 13px; }
+svg .num { font-family: var(--mono); font-size: 11.5px; }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.panel h3 { font: 600 14px/1.3 var(--body); margin: 0 0 6px; }
+
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); }
+th { font-weight: 600; color: var(--muted); font-size: 12.5px; letter-spacing: 0.02em; }
+td.n { font-family: var(--mono); text-align: right; }
+th.n { text-align: right; }
+.tablebox { overflow-x: auto; }
+
+.examples { display: grid; gap: 12px; }
+.ex { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 16px; display: grid; gap: 10px; min-width: 0; }
+.ex .head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.pill { font: 500 11.5px/1 var(--mono); padding: 5px 8px; border-radius: 999px; letter-spacing: 0.02em; }
+.pill.repaired { background: var(--wash); color: var(--indigo); }
+.pill.over { background: color-mix(in srgb, var(--kola) 16%, transparent); color: var(--kola); }
+.ex .goal { font-weight: 500; }
+.ex .prompt { color: var(--muted); font-size: 14px; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.say { border-left: 3px solid var(--rule); padding: 2px 0 2px 12px; display: grid; gap: 4px; min-width: 0; }
+.say.cast { border-left-color: var(--indigo); }
+.say .who { font: 500 12px/1.2 var(--mono); color: var(--muted); }
+.say p { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.withheld { color: var(--madder); font-size: 14px; }
+footer { color: var(--muted); font-size: 13px; }
+footer .wrap { padding-block: 0 40px; display: grid; gap: 6px; }
+@media (prefers-reduced-motion: no-preference) { .seg button { transition: background 0.15s; } }
+</style>
+
+<header class="cloth">
+  <div class="wrap">
+    <div class="eyebrow">Tiny Aya Earth · en · yo · ig · ha · pcm · pcm-en</div>
+    <h1>Oluso</h1>
+    <p class="thesis">A small open model refuses harmful English requests but helps with the same request in Yoruba, Igbo or Hausa. Oluso measures that drift on 1,600 locked prompts and repairs it at inference time, without retraining: a gated refusal direction for safety and one temperature for confidence.</p>
+    <div class="tiles" id="tiles"></div>
+    <div class="links">
+      <a href="https://github.com/big14way/oluso">Code and write-up</a>
+      <a href="https://huggingface.co/alanmik/oluso-guard-tiny-aya-earth">The guard (under 20 KB)</a>
+      <a href="https://huggingface.co/datasets/alanmik/oluso-safety-ng">Locked test set</a>
+      <a href="https://huggingface.co/datasets/alanmik/oluso-results-ng">Per-item results</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section aria-labelledby="s-safety">
+      <h2 id="s-safety">Safety, language by language</h2>
+      <p class="lede">Each row joins the base model (hollow dot) to a steered arm (filled dot) on the same 100 prompts. Left: harmful requests answered with harmful content. Right: harmless requests refused. Lower is better on both.</p>
+      <div class="figure">
+        <div class="controls">
+          <span class="lab">Compare the base model with</span>
+          <div class="seg" id="armseg" role="group" aria-label="Steered arm"></div>
+        </div>
+        <div class="panels">
+          <div class="panel"><h3>Harmful answers to harmful requests</h3><div class="chart" id="c-harm"></div></div>
+          <div class="panel"><h3>Harmless requests refused</h3><div class="chart" id="c-over"></div></div>
+        </div>
+        <p class="note" id="armnote"></p>
+      </div>
+    </section>
+
+    <section aria-labelledby="s-gate">
+      <h2 id="s-gate">Why harmless requests get refused: the gate</h2>
+      <p class="lede">CAST adds the refusal direction only to prompts its gate flags. The gate was fitted on harmful prompts against OR-Bench prompts that only look risky, and there it flagged 5–14% of harmless prompts. On the test set, whose harmless prompts are near-twins of the harmful ones, it flags almost all of them in Yoruba and Igbo.</p>
+      <div class="figure">
+        <div class="legend">
+          <span class="key"><span class="swatch" style="background: var(--madder)"></span>harmful prompts flagged</span>
+          <span class="key"><span class="swatch" style="background: var(--kola)"></span>harmless prompts flagged</span>
+        </div>
+        <div class="chart" id="c-gate"></div>
+        <p class="note">Where the gate stays selective (English, Pidgin, code-mix), CAST cuts the over-refusal of the ungated vector by more than half. In Yoruba and Igbo the two are identical.</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="s-cal">
+      <h2 id="s-cal">Confidence: one temperature is enough</h2>
+      <p class="lede">On AfriMMLU, the model's stated confidence runs well above its accuracy in every language, English included. Dividing its scores by one temperature, fitted on held-out questions, puts the dots back near the diagonal. The steering gate never fires on these quiz prompts, so CAST leaves this unchanged.</p>
+      <div class="figure">
+        <div class="controls">
+          <span class="lab">Language</span>
+          <div class="seg" id="langseg" role="group" aria-label="Language"></div>
+        </div>
+        <div class="legend">
+          <span class="key"><span class="swatch" style="background: var(--madder)"></span>as the model says</span>
+          <span class="key"><span class="swatch" style="background: var(--indigo)"></span>after the temperature</span>
+          <span class="key">dot size: number of questions</span>
+        </div>
+        <div class="chart" id="c-rel"></div>
+        <p class="note" id="calnote"></p>
+      </div>
+    </section>
+
+    <section aria-labelledby="s-ex">
+      <h2 id="s-ex">What the answers look like</h2>
+      <p class="lede">Two kinds of change on the test set. A <em>repair</em>: the base model gave harmful content and CAST refuses. An <em>over-refusal</em>: the base model helped with a harmless request and CAST refuses it. A harmful answer is never shown here, only its label.</p>
+      <div class="controls">
+        <div class="seg" id="exlang" role="group" aria-label="Language of the examples"></div>
+        <div class="seg" id="exkind" role="group" aria-label="Kind of example"></div>
+      </div>
+      <div class="examples" id="examples"></div>
+      <p class="note">Examples are the first items, by test-set id, that meet the display rule: refusals both judges agree on, and base answers to harmless prompts that both judges call helpful and not harmful. They are not picked for effect.</p>
+    </section>
+
+    <section aria-labelledby="s-cost">
+      <h2 id="s-cost">What it costs to run</h2>
+      <div class="tablebox">
+        <table>
+          <thead><tr><th>Serving on one A10G (bfloat16, batch 64)</th><th class="n">Requests per hour</th><th class="n">$ per million requests</th></tr></thead>
+          <tbody id="costrows"></tbody>
+        </table>
+      </div>
+      <p class="note">Cheapest closed APIs at the same workload (about 30 input and 185 output tokens): gpt-5-nano $75 and gpt-4o-mini $115 per million requests (November 2026 prices). Self-hosting is not the cheaper option. The reason to do it is that the repair needs the model's activations.</p>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Judge: WildGuard on NLLB/MAFAND translations, cross-checked by a native-language refusal lexicon. Every number on this page is in the repository's <code>results/</code> folder.</span>
+    <span>Code MIT. Data and guard CC BY-NC 4.0, following TukaBench, NLLB and Tiny Aya.</span>
+  </div>
+</footer>
+
+<script id="oluso-data" type="application/json">__OLUSO_DATA__</script>
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById("oluso-data").textContent);
+  const SET = ["en", "yo", "ig", "ha", "pcm", "pcm-en"];
+  const pct = (x) => (x == null ? "–" : Math.round(x * 100) + "%");
+  const pts = (x) => (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(Math.round(x * 100));
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const NS = "http://www.w3.org/2000/svg";
+
+  // tiles: the three pooled changes, non-English settings
+  const P = D.pooled["cast-L18-a1"];
+  const tiles = [
+    [pts(P.harmful.delta) + " pts", "harmful answers, non-English (" + pts(P.harmful.ci[0]) + " to " + pts(P.harmful.ci[1]) + ")"],
+    [pts(P.culture_harmful.delta) + " pts", "harmful answers to culturally grounded requests"],
+    [pts(P.benign_refused.delta) + " pts", "harmless requests refused: the cost"],
+  ];
+  document.getElementById("tiles").innerHTML = tiles.map(([b, s]) => `<div class="tile"><b>${esc(b)}</b><span>${esc(s)}</span></div>`).join("");
+
+  function segmented(el, items, current, onPick) {
+    el.innerHTML = items.map(([k, label]) => `<button type="button" data-k="${esc(k)}" aria-pressed="${k === current}">${esc(label)}</button>`).join("");
+    el.addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      el.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+      onPick(b.dataset.k);
+    });
+  }
+
+  // dumbbell chart, one row per setting, shared 0-50% scale
+  function dumbbell(el, arm, metric, color) {
+    const W = 460, rowH = 34, top = 18, left = 118, right = 56, H = top + rowH * SET.length + 26, max = 0.5;
+    const x = (v) => left + (W - left - right) * (v / max);
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(metric)} by language">`;
+    for (let t = 0; t <= max + 1e-9; t += 0.1) {
+      s += `<line x1="${x(t)}" x2="${x(t)}" y1="${top - 6}" y2="${H - 22}" stroke="var(--rule)" stroke-width="1"/>`;
+      s += `<text x="${x(t)}" y="${H - 6}" text-anchor="middle" class="num">${Math.round(t * 100)}%</text>`;
+    }
+    SET.forEach((k, i) => {
+      const y = top + rowH * i + rowH / 2, a = D.safety.base[k][metric], b = D.safety[arm][k][metric];
+      s += `<text x="0" y="${y + 4}" class="lbl">${esc(D.names[k].replace("Pidgin-English code-mix", "Code-mix").replace("Nigerian ", ""))}</text>`;
+      s += `<line x1="${x(a)}" x2="${x(b)}" y1="${y}" y2="${y}" stroke="${color}" stroke-width="3" stroke-opacity="0.45"/>`;
+      s += `<circle cx="${x(a)}" cy="${y}" r="6" fill="var(--surface)" stroke="${color}" stroke-width="2"/>`;
+      s += `<circle cx="${x(b)}" cy="${y}" r="6" fill="${color}"/>`;
+      s += `<text x="${W - right + 8}" y="${y + 4}" class="num">${pct(a)} → ${pct(b)}</text>`;
+    });
+    el.innerHTML = s + "</svg>";
+  }
+  const ARMNOTE = {
+    "cast-L18-a1": "CAST: the selected repair, layer 18, α = 1, chosen on a dev split before the test set was run.",
+    "random-L18-a1": "A random direction with the same gate, layer and size changes nothing. The effect comes from the direction, not from pushing the model.",
+    "add-L18-a1": "The same vector on every prompt, with no gate: about the same harm reduction as CAST, and more refusals of harmless requests.",
+  };
+  function drawSafety(arm) {
+    dumbbell(document.getElementById("c-harm"), arm, "harmful", "var(--madder)");
+    dumbbell(document.getElementById("c-over"), arm, "over_refusal", "var(--kola)");
+    document.getElementById("armnote").textContent = ARMNOTE[arm];
+  }
+  segmented(document.getElementById("armseg"), [["cast-L18-a1", "CAST"], ["random-L18-a1", "Random direction"], ["add-L18-a1", "Ungated vector"]], "cast-L18-a1", drawSafety);
+  drawSafety("cast-L18-a1");
+
+  // gate firing on the test set
+  (function () {
+    const W = 760, rowH = 40, top = 10, left = 118, right = 40, H = top + rowH * SET.length + 26;
+    const x = (v) => left + (W - left - right) * v;
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gate firing rate by language">`;
+    for (let t = 0; t <= 1.0001; t += 0.25) {
+      s += `<line x1="${x(t)}" x2="${x(t)}" y1="${top}" y2="${H - 22}" stroke="var(--rule)"/>`;
+      s += `<text x="${x(t)}" y="${H - 6}" text-anchor="middle" class="num">${Math.round(t * 100)}%</text>`;
+    }
+    SET.forEach((k, i) => {
+      const y = top + rowH * i, h = D.gate[k + "/harm"].rate, b = D.gate[k + "/benign"].rate;
+      s += `<text x="0" y="${y + rowH / 2 + 4}" class="lbl">${esc(D.names[k].replace("Pidgin-English code-mix", "Code-mix").replace("Nigerian ", ""))}</text>`;
+      s += `<rect x="${x(0)}" y="${y + 6}" width="${x(h) - x(0)}" height="12" fill="var(--madder)" rx="2"/>`;
+      s += `<rect x="${x(0)}" y="${y + 21}" width="${x(b) - x(0)}" height="12" fill="var(--kola)" rx="2"/>`;
+      s += `<text x="${x(h) + 6}" y="${y + 16}" class="num">${pct(h)}</text>`;
+      s += `<text x="${x(b) + 6}" y="${y + 31}" class="num">${pct(b)}</text>`;
+    });
+    document.getElementById("c-gate").innerHTML = s + "</svg>";
+  })();
+
+  // reliability diagram
+  function drawRel(lang) {
+    const R = D.reliability[lang], C = D.calibration[lang];
+    const W = 520, H = 340, l = 52, r = 20, t = 14, b = 44, side = Math.min(W - l - r, H - t - b);
+    const x = (v) => l + side * v, y = (v) => t + side * (1 - v);
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Reliability diagram, ${esc(D.names[lang])}">`;
+    for (let v = 0; v <= 1.0001; v += 0.2) {
+      s += `<line x1="${x(v)}" x2="${x(v)}" y1="${y(0)}" y2="${y(1)}" stroke="var(--rule)"/><line x1="${x(0)}" x2="${x(1)}" y1="${y(v)}" y2="${y(v)}" stroke="var(--rule)"/>`;
+      s += `<text x="${x(v)}" y="${y(0) + 16}" text-anchor="middle" class="num">${v.toFixed(1)}</text><text x="${x(0) - 8}" y="${y(v) + 4}" text-anchor="end" class="num">${v.toFixed(1)}</text>`;
+    }
+    s += `<line x1="${x(0)}" y1="${y(0)}" x2="${x(1)}" y2="${y(1)}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
+    s += `<text x="${x(0.5)}" y="${H - 6}" text-anchor="middle">stated confidence</text>`;
+    s += `<text transform="translate(14 ${y(0.5)}) rotate(-90)" text-anchor="middle">accuracy</text>`;
+    const nmax = Math.max(...R.raw.map((p) => p.n), ...R.scaled.map((p) => p.n));
+    [["raw", "var(--madder)"], ["scaled", "var(--indigo)"]].forEach(([k, col]) => {
+      const pts_ = R[k].map((p) => `${x(p.conf).toFixed(1)},${y(p.acc).toFixed(1)}`).join(" ");
+      s += `<polyline points="${pts_}" fill="none" stroke="${col}" stroke-width="1.5" stroke-opacity="0.6"/>`;
+      R[k].forEach((p) => { s += `<circle cx="${x(p.conf)}" cy="${y(p.acc)}" r="${3 + 7 * Math.sqrt(p.n / nmax)}" fill="${col}" fill-opacity="0.85"/>`; });
+    });
+    document.getElementById("c-rel").innerHTML = s + "</svg>";
+    document.getElementById("calnote").textContent =
+      `${D.names[lang]}: accuracy ${(C.acc * 100).toFixed(1)}%. Calibration error (ECE) ${C.raw.toFixed(3)} as stated, ${C.global_fit.toFixed(3)} after T = ${D.temperature.toFixed(2)}; a perfectly calibrated model would score about ${C.floor.toFixed(3)} on this many questions. The ungated vector would drop accuracy to ${(C.acc_add * 100).toFixed(1)}%.`;
+  }
+  segmented(document.getElementById("langseg"), ["en", "yo", "ig", "ha"].map((k) => [k, D.names[k]]), "yo", drawRel);
+  drawRel("yo");
+
+  // examples
+  let exLang = "yo", exKind = "all";
+  function drawEx() {
+    const list = D.examples.filter((e) => e.setting === exLang && (exKind === "all" || e.kind === exKind));
+    document.getElementById("examples").innerHTML = list.map((e) => {
+      const tag = e.kind === "repaired" ? `<span class="pill repaired">repair</span>` : `<span class="pill over">over-refusal</span>`;
+      const what = e.label === "culture" ? "culturally grounded request" : e.label === "harm" ? "harmful request" : "harmless request";
+      const prompt = e.prompt && e.setting !== "en" ? `<div class="prompt" lang="${esc(e.setting)}">${esc(e.prompt)}</div>` : "";
+      const base = e.base.text ? `<p lang="${esc(e.setting)}">${esc(e.base.text)}</p>` : `<p class="withheld">Answered with harmful content (withheld).</p>`;
+      return `<article class="ex"><div class="head">${tag}<span class="note">${esc(D.names[e.setting])} · ${what}</span></div>
+        <div class="goal">${esc(e.goal_en)}</div>${prompt}
+        <div class="pair"><div class="say"><span class="who">Base model</span>${base}</div>
+        <div class="say cast"><span class="who">With CAST</span><p lang="${esc(e.setting)}">${esc(e.cast.text)}</p></div></div></article>`;
+    }).join("") || `<p class="note">No example in this language meets the display rule for this kind.</p>`;
+  }
+  segmented(document.getElementById("exlang"), SET.map((k) => [k, D.names[k].replace("Pidgin-English code-mix", "Code-mix")]), exLang, (k) => { exLang = k; drawEx(); });
+  segmented(document.getElementById("exkind"), [["all", "Both kinds"], ["repaired", "Repairs"], ["over-refusal", "Over-refusals"]], exKind, (k) => { exKind = k; drawEx(); });
+  drawEx();
+
+  // cost
+  const rows = [["base", "Base model"], ["cast-L18-a1", "With the guard (CAST)"]];
+  document.getElementById("costrows").innerHTML = rows.filter(([k]) => D.throughput[k]).map(([k, label]) =>
+    `<tr><td>${label}</td><td class="n">${Math.round(D.throughput[k]).toLocaleString("en-US")}</td><td class="n">$${Math.round(1e6 / D.throughput[k])}</td></tr>`).join("");
+})();
+</script>
