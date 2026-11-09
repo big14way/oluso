@@ -46,3 +46,15 @@ def test_export_refuses_a_text_key_in_the_schema(monkeypatch, tmp_path):
     monkeypatch.setattr(export, "SAFETY_KEYS", export.SAFETY_KEYS + ("response",))
     with pytest.raises(ValueError, match="response"):
         export.build(p2, tmp_path / "p3")
+
+
+def test_guard_publish_is_a_dry_run_and_ships_only_the_guard(tmp_path):
+    from oluso import guard
+
+    (tmp_path / "guard.json").write_text("{}")
+    (tmp_path / "steering.pt").write_bytes(b"x")
+    plan = guard.publish(tmp_path)
+    assert plan["applied"] is False and plan["files"] == ["guard.json", "steering.pt", "README.md"]
+    (tmp_path / "responses.jsonl").write_text("{}")  # anything else is refused
+    with pytest.raises(ValueError, match="unexpected files"):
+        guard.publish(tmp_path)

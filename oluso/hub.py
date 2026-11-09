@@ -50,3 +50,14 @@ def init_collections(apply: bool = False) -> dict:
     config.RECORDS_DIR.mkdir(parents=True, exist_ok=True)
     RECORD.write_text(json.dumps(out, indent=2) + "\n")
     return out
+
+
+def add_to_collection(repo_id: str, repo_type: str, key: str, note: str | None = None) -> str:
+    """Add a public repo to the models or datasets collection recorded in records/hub.json."""
+    from huggingface_hub import HfApi
+
+    slug = json.loads(RECORD.read_text())[key]["slug"]
+    api = HfApi(token=hf_token())
+    api.add_collection_item(slug, item_id=repo_id, item_type=repo_type, note=note,
+                            exists_ok=True)  # fmt: skip
+    return slug

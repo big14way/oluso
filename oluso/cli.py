@@ -250,9 +250,45 @@ def cmd_p3(args) -> int:
     elif args.step == "table":
         from oluso import report_after
 
-        out = Path(args.out_dir) if args.out_dir else None
-        res = report_after.after_table(Path(args.p2_dir), run_dir, out)
+        if args.from_hub:  # rebuild from the public label-only results; results/ is untouched
+            import tempfile
+
+            res = report_after.from_hub(Path(tempfile.mkdtemp(prefix="oluso-tables-")))
+        else:
+            out = Path(args.out_dir) if args.out_dir else None
+            res = report_after.after_table(Path(args.p2_dir), run_dir, out)
         print(report_after.markdown(res))
+    return 0
+
+
+def cmd_guard(args) -> int:
+    from pathlib import Path
+
+    from oluso import config, guard
+
+    if args.step == "export":
+        t = args.temperature
+        if t is None:  # the global temperature from the after-table (all languages' validation)
+            cal = json.loads((config.RESULTS_DIR / "p3_after.json").read_text())["calibration"]
+            t = round(cal["base"]["en"]["global_T"], 3)  # one T, shared by every language
+        prov = {"selection": "dev split, pre-stated rule (see results/p3_selection.json)",
+                "fit_set": "alanmik/oluso-steer-fit-ng (fit split)",
+                "test_set": "alanmik/oluso-safety-ng (locked, run once)",
+                "temperature": "one global T fitted by NLL on AfriMMLU validation (en/yo/ig/ha)",
+                "code": "https://github.com/big14way/oluso"}  # fmt: skip
+        _print(guard.export(Path(args.run_dir), Path(args.out_dir), t, prov))
+    else:
+        _print(guard.publish(Path(args.out_dir), apply=args.apply))
+    return 0
+
+
+def cmd_demo(args) -> int:
+    from pathlib import Path
+
+    from oluso import demo
+
+    out = Path(args.out_dir)
+    _print(demo.write(out) if args.step == "build" else demo.publish(out, apply=args.apply))
     return 0
 
 
@@ -331,7 +367,23 @@ def main(argv: list[str] | None = None) -> int:
     q.add_argument("--arms", default=None, help="test/calib: comma list of arm kinds to run")
     q.add_argument("--out-dir", default=None, help="table: where to write (default results/)")
     q.add_argument("--dtype", default="bfloat16", help="bench: serving dtype to time")
+    q.add_argument("--from-hub", action="store_true",
+                   help="table: rebuild from the public results dataset")  # fmt: skip
     q.set_defaults(fn=cmd_p3)
+
+    g = sub.add_parser("guard", help="export the guard locally, or publish it (dry run by default)")
+    g.add_argument("step", choices=["export", "publish"])
+    g.add_argument("--run-dir", default="runs/p3")
+    g.add_argument("--out-dir", default="dist/guard")
+    g.add_argument("--temperature", type=float, default=None, help="export: default global T")
+    g.add_argument("--apply", action="store_true", help="publish: push it public to the Hub")
+    g.set_defaults(fn=cmd_guard)
+
+    m = sub.add_parser("demo", help="build the static results page, or publish it as a Space")
+    m.add_argument("step", choices=["build", "publish"])
+    m.add_argument("--out-dir", default="dist/space")
+    m.add_argument("--apply", action="store_true", help="publish: create the public Space")
+    m.set_defaults(fn=cmd_demo)
 
     x = sub.add_parser("export", help="label-only results dataset (dry run by default)")
     x.add_argument("--p2-dir", default="runs/p2")

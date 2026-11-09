@@ -56,9 +56,13 @@ def reproducibility(p2_dir: Path, rows: list[dict]) -> dict | None:
     base = [r for r in rows if r["arm"] == "base" and r["id"] in p2]
     if not base:
         return None
-    same = sum(r["response"] == p2[r["id"]]["response"] for r in base)
     label = sum(r["final"] == p2[r["id"]]["final"] for r in base)
-    return {"n": len(base), "identical_answer": same / len(base), "same_label": label / len(base)}
+    out = {"n": len(base), "identical_answer": None, "same_label": label / len(base)}
+    if all("response" in r and "response" in p2[r["id"]] for r in base):  # private run files only
+        out["identical_answer"] = sum(r["response"] == p2[r["id"]]["response"] for r in base) / len(
+            base
+        )
+    return out
 
 
 def _pairs(rows: list[dict], a: str, b: str) -> list[tuple[dict, dict]]:
@@ -226,8 +230,12 @@ def markdown(res: dict) -> str:
                      f"| {'yes' if ni['non_inferior'] else 'no'} |")  # fmt: skip
     rep = res.get("base_reproducibility_vs_p2")
     if rep:
-        lines += ["", f"Base re-run on the steering machine against the P2 baseline: "
-                  f"{100 * rep['identical_answer']:.1f}% identical answers, "
+        same = (
+            ""
+            if rep["identical_answer"] is None
+            else f"{100 * rep['identical_answer']:.1f}% identical answers, "
+        )
+        lines += ["", f"Base re-run on the steering machine against the P2 baseline: {same}"
                   f"{100 * rep['same_label']:.1f}% same judge label (n = {rep['n']})."]  # fmt: skip
     if "cast_vs_random" in res:
         p = res["cast_vs_random"]["pooled_non_english"]
@@ -258,3 +266,33 @@ def markdown(res: dict) -> str:
                 f"| {r['nll']:.3f} → {cf['nll']:.3f} |"
             )
     return "\n".join(lines) + "\n"
+
+
+def from_rows(configs: dict[str, list[dict]], selection: dict, work: Path) -> dict:
+    """Rebuild the after-table from the published label-only rows (oluso-results-ng).
+
+    The `base-p2` arm becomes the P2 run folder, every other arm the P3 one. Answer text is
+    not published, so the base reproducibility check reports label agreement only."""
+    p2, p3 = work / "p2", work / "p3"
+    for d in (p2, p3):
+        d.mkdir(parents=True, exist_ok=True)
+
+    def write(path: Path, rows: list[dict]) -> None:
+        path.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+
+    safety, calib = configs["safety"], configs["afrimmlu"]
+    write(p2 / "judged.jsonl", [r for r in safety if r["arm"] == "base-p2"])
+    write(p3 / "test_judged.jsonl", [r for r in safety if r["arm"] != "base-p2"])
+    write(p2 / "afrimmlu_scores.jsonl", [r for r in calib if r["arm"] == "base-p2"])
+    write(p3 / "calib_scores.jsonl", [r for r in calib if r["arm"] != "base-p2"])
+    (p3 / "selection.json").write_text(json.dumps(selection))
+    return after_table(p2, p3, work / "results")
+
+
+def from_hub(work: Path, repo: str = "alanmik/oluso-results-ng") -> dict:
+    from datasets import load_dataset
+
+    configs = {c: [dict(r) for r in load_dataset(repo, c, split="train")]
+               for c in ("safety", "afrimmlu")}  # fmt: skip
+    selection = json.loads((config.RESULTS_DIR / "p3_selection.json").read_text())["selection"]
+    return from_rows(configs, selection, work)
