@@ -1,6 +1,6 @@
 Oluso measures and repairs, without retraining, two kinds of drift in Tiny Aya Earth across Yoruba, Igbo, Hausa, Nigerian Pidgin and Pidgin-English code-mix: safety drift (lost refusals, or refused harmless requests) and calibration drift (confidence that stops tracking accuracy).
 
-We locked a test set of 1,600 prompts: TukaBench for English, Yoruba, Igbo and Hausa, plus new Pidgin and code-mix sets. Each answer is labelled refused, complied or deflected. The judge is WildGuard reading NLLB/MAFAND translations, validated on English human labels (κ 0.88 XSTest, 0.77 JailbreakBench) and cross-checked by a native-language refusal lexicon. Calibration is measured on AfriMMLU with ECE, Brier, NLL and AUROC.
+We locked a test set of 1,600 prompts: TukaBench for English, Yoruba, Igbo and Hausa, plus new Pidgin and code-mix sets. Each answer is labelled refused, harmful or deflected. The judge is WildGuard reading NLLB/MAFAND translations, validated on English human labels (κ 0.88 XSTest, 0.77 JailbreakBench) and cross-checked by a native-language refusal lexicon. Calibration is measured on AfriMMLU with ECE, Brier, NLL and AUROC.
 
 Before: the model gives harmful content in answer to 3% of harmful English requests, but 35% in Yoruba, 24% in Igbo and 15% in Hausa, and 58% on culturally grounded Yoruba requests. Calibration drifts differently: the model is overconfident in every language, English included (ECE 0.19–0.23).
 
